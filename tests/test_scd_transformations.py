@@ -112,7 +112,7 @@ def _cust(
     ts: datetime | None,
 ) -> tuple:
     """Return a CUSTOMER_SCHEMA-ordered tuple with a derived email."""
-    email = f"{first[0].lower()}@ex.com" if first else "x@ex.com"
+    email = f"{first[0].lower()}@ex.com" if first and len(first) > 0 else "x@ex.com"
     return (cid, first, last, email, country, city, segment, revenue, active, ts)
 
 

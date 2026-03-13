@@ -34,6 +34,7 @@ Reference:
     https://www.palantir.com/docs/foundry/transforms-python-spark/pyspark-style-guide
 """
 
+from pyspark.errors import AnalysisException
 from pyspark.pipelines import materialized_view, table
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
@@ -155,7 +156,7 @@ def dim_customers_scd2() -> "DataFrame":  # type: ignore[name-defined]  # noqa: 
     # with the required schema on the very first pipeline run.
     try:
         existing_scd2 = spark.table("dim_customers_scd2")
-    except Exception:  # noqa: BLE001
+    except AnalysisException:
         existing_scd2 = spark.createDataFrame(
             [],
             schema=silver_df.schema.add("effective_from", "timestamp").add(

@@ -208,8 +208,8 @@ _SCD2_TRACKED_COLUMNS: list[str] = [
 ]
 
 
-def _build_change_hash(df: DataFrame, alias: str, tracked_cols: list[str]) -> DataFrame:
-    """Attach a SHA-256 hash of ``tracked_cols`` values to each row.
+def _build_change_hash(df: DataFrame, alias: str, tracked_cols: list[str]) -> "Column":  # noqa: F821
+    """Return a SHA-256 hash Column of the concatenated ``tracked_cols`` values.
 
     The hash is computed over the concatenation of all tracked column values
     (cast to string and separated by ``"||"``).  This hash is used to detect
