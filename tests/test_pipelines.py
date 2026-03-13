@@ -111,7 +111,18 @@ def bronze_customers_view(spark: SparkSession) -> None:
 
     ts = datetime(2024, 1, 1)
     data = [
-        ("C001", "Alice", "Smith", "a@ex.com", "US", "NYC", "Retail", 75_000.0, True, ts),  # noqa: E501
+        (
+            "C001",
+            "Alice",
+            "Smith",
+            "a@ex.com",
+            "US",
+            "NYC",
+            "Retail",
+            75_000.0,
+            True,
+            ts,
+        ),  # noqa: E501
         ("C002", "Bob", "Jones", "b@ex.com", "UK", "London", "SMB", 5_000.0, True, ts),
     ]
     spark.createDataFrame(data, schema=_CUSTOMER_SCHEMA).createOrReplaceTempView(
@@ -128,7 +139,18 @@ def silver_customers_view(spark: SparkSession) -> None:
 
     ts = datetime(2024, 1, 1)
     data = [
-        ("C001", "Alice", "Smith", "a@ex.com", "US", "NYC", "Retail", 75_000.0, True, ts),  # noqa: E501
+        (
+            "C001",
+            "Alice",
+            "Smith",
+            "a@ex.com",
+            "US",
+            "NYC",
+            "Retail",
+            75_000.0,
+            True,
+            ts,
+        ),  # noqa: E501
         ("C002", "Bob", "Jones", "b@ex.com", "UK", "London", "SMB", 5_000.0, True, ts),
     ]
     spark.createDataFrame(data, schema=_CUSTOMER_SCHEMA).createOrReplaceTempView(
@@ -228,9 +250,7 @@ def test_compute_gold_revenue_by_segment_columns(
     """Gold revenue-by-segment must have the expected four columns."""
     from src.python.transformations import enrich_with_revenue_tier
 
-    enriched = enrich_with_revenue_tier(
-        spark.table("silver_valid_customers")
-    )
+    enriched = enrich_with_revenue_tier(spark.table("silver_valid_customers"))
     enriched.createOrReplaceTempView("silver_valid_customers")
     result = _compute_gold_revenue_by_segment(spark)
     spark.catalog.dropTempView("silver_valid_customers")

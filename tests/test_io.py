@@ -84,7 +84,20 @@ def test_read_customers_parquet_schema(spark: SparkSession, tmp_path: Path) -> N
     from datetime import datetime
 
     parquet_dir = tmp_path / "customers"
-    data = [("C001", "Alice", "Smith", "a@ex.com", "US", "NYC", "Retail", 75_000.0, True, datetime(2024, 1, 1))]  # noqa: E501
+    data = [
+        (
+            "C001",
+            "Alice",
+            "Smith",
+            "a@ex.com",
+            "US",
+            "NYC",
+            "Retail",
+            75_000.0,
+            True,
+            datetime(2024, 1, 1),
+        )
+    ]  # noqa: E501
     spark.createDataFrame(data, schema=_MINIMAL_CUSTOMER_SCHEMA).write.parquet(
         str(parquet_dir)
     )
@@ -99,7 +112,18 @@ def test_read_customers_parquet_row_count(spark: SparkSession, tmp_path: Path) -
     parquet_dir = tmp_path / "customers2"
     ts = datetime(2024, 1, 1)
     data = [
-        ("C001", "Alice", "Smith", "a@ex.com", "US", "NYC", "Retail", 75_000.0, True, ts),  # noqa: E501
+        (
+            "C001",
+            "Alice",
+            "Smith",
+            "a@ex.com",
+            "US",
+            "NYC",
+            "Retail",
+            75_000.0,
+            True,
+            ts,
+        ),  # noqa: E501
         ("C002", "Bob", "Jones", "b@ex.com", "UK", "London", "SMB", 5_000.0, True, ts),
     ]
     spark.createDataFrame(data, schema=_MINIMAL_CUSTOMER_SCHEMA).write.parquet(

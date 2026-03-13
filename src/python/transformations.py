@@ -61,6 +61,7 @@ def _filter_active(df: DataFrame) -> DataFrame:
     """Return only rows where ``is_active`` is ``True``."""
     return df.filter(F.col("is_active"))
 
+
 # ---------------------------------------------------------------------------
 # Filtering – User CSV pipeline
 # ---------------------------------------------------------------------------
