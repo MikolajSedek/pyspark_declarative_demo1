@@ -24,11 +24,7 @@ def read_users_csv(spark: SparkSession, path: str = "data/users.csv") -> DataFra
     Returns:
         DataFrame containing all rows from the CSV file.
     """
-    return (
-        spark.read.option("header", "true")
-        .option("inferSchema", "true")
-        .csv(path)
-    )
+    return spark.read.option("header", "true").option("inferSchema", "true").csv(path)
 
 
 def read_customers_parquet(
