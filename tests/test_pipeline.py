@@ -5,12 +5,13 @@ These tests exercise the pure-Python transformation logic in
 ``spark`` fixture defined in ``conftest.py``.
 
 Following pytest best-practices:
-- One assertion per test where feasible.
-- Descriptive test names that read as specifications.
-- Minimal, self-contained fixture data created inline.
+- Pure test functions (no test classes).
+- ``pytest.fixture`` for reusable DataFrame inputs.
+- ``pytest.mark.parametrize`` for data-driven assertions.
 """
 
-from pyspark.sql import Row, SparkSession
+import pytest
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import BooleanType, StringType, StructField, StructType
 
 from pipeline.transformations import (
@@ -20,7 +21,7 @@ from pipeline.transformations import (
 )
 
 # ---------------------------------------------------------------------------
-# Shared test data schema
+# Schema
 # ---------------------------------------------------------------------------
 
 USER_SCHEMA = StructType(
@@ -33,51 +34,82 @@ USER_SCHEMA = StructType(
     ]
 )
 
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def mixed_users_df(spark: SparkSession) -> DataFrame:
+    """DataFrame with a mix of active and inactive users across countries."""
+    data = [
+        ("1", "Alice", "Smith", "US", True),
+        ("2", "Bob", "Jones", "US", False),
+        ("3", "Carlo", "Rossi", "IT", True),
+        ("4", "Diana", "Prince", "IT", True),
+        ("5", "Ethan", "Brown", "UK", False),
+    ]
+    return spark.createDataFrame(data, schema=USER_SCHEMA)
+
+
+@pytest.fixture()
+def active_users_df(spark: SparkSession) -> DataFrame:
+    """DataFrame containing only active users with varied names and countries."""
+    data = [
+        ("1", "Alice", "Smith", "US", True),
+        ("3", "Carlo", "Rossi", "IT", True),
+        ("4", "Diana", "Prince", "IT", True),
+    ]
+    return spark.createDataFrame(data, schema=USER_SCHEMA)
+
+
+@pytest.fixture()
+def empty_df(spark: SparkSession) -> DataFrame:
+    """Empty DataFrame matching the user schema."""
+    return spark.createDataFrame([], schema=USER_SCHEMA)
+
 
 # ---------------------------------------------------------------------------
 # filter_active_users
 # ---------------------------------------------------------------------------
 
 
-class TestFilterActiveUsers:
-    """Tests for the ``filter_active_users`` transformation."""
+def test_filter_active_users_excludes_inactive(mixed_users_df: DataFrame) -> None:
+    """Only active rows must be present in the output."""
+    result = filter_active_users(mixed_users_df)
+    assert result.count() == 3
 
-    def test_keeps_only_active_rows(self, spark: SparkSession) -> None:
-        """Inactive rows must be excluded from the output."""
-        data = [
-            Row(
-                id="1", first_name="Alice", last_name="A", country="US", is_active=True
-            ),
-            Row(id="2", first_name="Bob", last_name="B", country="UK", is_active=False),
-        ]
-        df = spark.createDataFrame(data, schema=USER_SCHEMA)
 
-        result = filter_active_users(df)
+def test_filter_active_users_no_inactive_flag_in_result(
+    mixed_users_df: DataFrame,
+) -> None:
+    """No row in the result may have ``is_active == False``."""
+    result = filter_active_users(mixed_users_df)
+    inactive_count = result.filter(~result["is_active"]).count()
+    assert inactive_count == 0
 
-        assert result.count() == 1
 
-    def test_active_row_values_are_unchanged(self, spark: SparkSession) -> None:
-        """Active rows must not have their data modified."""
-        data = [
-            Row(
-                id="1", first_name="Alice", last_name="A", country="US", is_active=True
-            ),
-        ]
-        df = spark.createDataFrame(data, schema=USER_SCHEMA)
+def test_filter_active_users_empty_input_returns_empty(empty_df: DataFrame) -> None:
+    """An empty input DataFrame must produce an empty output DataFrame."""
+    assert filter_active_users(empty_df).count() == 0
 
-        result = filter_active_users(df)
 
-        row = result.collect()[0]
-        assert row["id"] == "1"
-        assert row["is_active"] is True
-
-    def test_empty_dataframe_returns_empty(self, spark: SparkSession) -> None:
-        """An empty input must yield an empty output."""
-        df = spark.createDataFrame([], schema=USER_SCHEMA)
-
-        result = filter_active_users(df)
-
-        assert result.count() == 0
+@pytest.mark.parametrize(
+    ("row_id", "expected_country"),
+    [
+        ("1", "US"),
+        ("3", "IT"),
+        ("4", "IT"),
+    ],
+)
+def test_filter_active_users_preserves_row_data(
+    active_users_df: DataFrame, row_id: str, expected_country: str
+) -> None:
+    """Active rows must retain their original field values after filtering."""
+    result = filter_active_users(active_users_df)
+    row = result.filter(result["id"] == row_id).collect()[0]
+    assert row["country"] == expected_country
+    assert row["is_active"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -85,42 +117,31 @@ class TestFilterActiveUsers:
 # ---------------------------------------------------------------------------
 
 
-class TestEnrichWithFullName:
-    """Tests for the ``enrich_with_full_name`` transformation."""
+def test_enrich_with_full_name_adds_column(active_users_df: DataFrame) -> None:
+    """The output must contain a ``full_name`` column."""
+    result = enrich_with_full_name(active_users_df)
+    assert "full_name" in result.columns
 
-    def test_full_name_column_is_added(self, spark: SparkSession) -> None:
-        """The output DataFrame must contain a ``full_name`` column."""
-        data = [
-            Row(
-                id="1",
-                first_name="Alice",
-                last_name="Smith",
-                country="US",
-                is_active=True,
-            ),
-        ]
-        df = spark.createDataFrame(data, schema=USER_SCHEMA)
 
-        result = enrich_with_full_name(df)
-
-        assert "full_name" in result.columns
-
-    def test_full_name_is_concatenated_correctly(self, spark: SparkSession) -> None:
-        """``full_name`` must be ``first_name`` + space + ``last_name``."""
-        data = [
-            Row(
-                id="1",
-                first_name="Alice",
-                last_name="Smith",
-                country="US",
-                is_active=True,
-            ),
-        ]
-        df = spark.createDataFrame(data, schema=USER_SCHEMA)
-
-        result = enrich_with_full_name(df)
-
-        assert result.collect()[0]["full_name"] == "Alice Smith"
+@pytest.mark.parametrize(
+    ("first_name", "last_name", "expected_full_name"),
+    [
+        ("Alice", "Smith", "Alice Smith"),
+        ("Carlo", "Rossi", "Carlo Rossi"),
+        ("Diana", "Prince", "Diana Prince"),
+    ],
+)
+def test_enrich_with_full_name_concatenates_correctly(
+    spark: SparkSession,
+    first_name: str,
+    last_name: str,
+    expected_full_name: str,
+) -> None:
+    """``full_name`` must equal ``first_name`` + ' ' + ``last_name``."""
+    data = [("x", first_name, last_name, "US", True)]
+    df = spark.createDataFrame(data, schema=USER_SCHEMA)
+    result = enrich_with_full_name(df)
+    assert result.collect()[0]["full_name"] == expected_full_name
 
 
 # ---------------------------------------------------------------------------
@@ -128,39 +149,23 @@ class TestEnrichWithFullName:
 # ---------------------------------------------------------------------------
 
 
-class TestAggregateUserCountByCountry:
-    """Tests for the ``aggregate_user_count_by_country`` transformation."""
+def test_aggregate_output_columns(active_users_df: DataFrame) -> None:
+    """The result must contain exactly ``country`` and ``user_count`` columns."""
+    result = aggregate_user_count_by_country(active_users_df)
+    assert set(result.columns) == {"country", "user_count"}
 
-    def test_output_has_country_and_user_count_columns(
-        self, spark: SparkSession
-    ) -> None:
-        """The result must contain exactly ``country`` and ``user_count``."""
-        data = [
-            Row(
-                id="1", first_name="Alice", last_name="A", country="US", is_active=True
-            ),
-        ]
-        df = spark.createDataFrame(data, schema=USER_SCHEMA)
 
-        result = aggregate_user_count_by_country(df)
-
-        assert set(result.columns) == {"country", "user_count"}
-
-    def test_counts_are_correct_per_country(self, spark: SparkSession) -> None:
-        """Each country must show the correct user count."""
-        data = [
-            Row(
-                id="1", first_name="Alice", last_name="A", country="US", is_active=True
-            ),
-            Row(id="2", first_name="Bob", last_name="B", country="US", is_active=True),
-            Row(
-                id="3", first_name="Carlo", last_name="C", country="IT", is_active=True
-            ),
-        ]
-        df = spark.createDataFrame(data, schema=USER_SCHEMA)
-
-        result = aggregate_user_count_by_country(df)
-        counts = {row["country"]: row["user_count"] for row in result.collect()}
-
-        assert counts["US"] == 2
-        assert counts["IT"] == 1
+@pytest.mark.parametrize(
+    ("country", "expected_count"),
+    [
+        ("IT", 2),
+        ("US", 1),
+    ],
+)
+def test_aggregate_counts_per_country(
+    active_users_df: DataFrame, country: str, expected_count: int
+) -> None:
+    """Each country must report the correct number of users."""
+    result = aggregate_user_count_by_country(active_users_df)
+    counts = {row["country"]: row["user_count"] for row in result.collect()}
+    assert counts[country] == expected_count
