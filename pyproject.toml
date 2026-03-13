@@ -21,6 +21,7 @@ dev = [
     "bandit>=1.7.0",
     "interrogate>=1.7.0",
     "detect-secrets>=1.4.0",
+    "mypy>=1.10.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -59,3 +60,9 @@ ignore-private = true
 fail-under = 80
 verbose = 0
 quiet = false
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+strict = false
+warn_return_any = false
