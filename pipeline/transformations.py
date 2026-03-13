@@ -17,7 +17,7 @@ def filter_active_users(df: DataFrame) -> DataFrame:
     Returns:
         DataFrame containing only active user rows.
     """
-    return df.filter(F.col("is_active") == True)  # noqa: E712
+    return df.filter(F.col("is_active"))
 
 
 def enrich_with_full_name(df: DataFrame) -> DataFrame:
