@@ -54,6 +54,7 @@ Reference:
     https://spark.apache.org/docs/latest/declarative-pipelines-programming-guide.html
 """
 
+from pyspark.errors import PySparkRuntimeError
 from pyspark.pipelines import materialized_view, table
 from pyspark.sql import DataFrame, SparkSession
 
@@ -105,29 +106,33 @@ def register_user_pipeline(spark: SparkSession) -> None:
         spark: The active ``SparkSession`` for this pipeline run.
     """
 
-    # -----------------------------------------------------------------------
-    # Bronze layer – raw CSV ingestion
-    # -----------------------------------------------------------------------
+    try:
+        # -----------------------------------------------------------------------
+        # Bronze layer – raw CSV ingestion
+        # -----------------------------------------------------------------------
 
-    @table(comment="Raw user records ingested from the CSV source.")
-    def bronze_users() -> DataFrame:
-        return _compute_bronze_users(spark)
+        @table(comment="Raw user records ingested from the CSV source.")
+        def bronze_users() -> DataFrame:
+            return _compute_bronze_users(spark)
 
-    # -----------------------------------------------------------------------
-    # Silver layer – cleansed & enriched
-    # -----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
+        # Silver layer – cleansed & enriched
+        # -----------------------------------------------------------------------
 
-    @materialized_view(comment="Active users enriched with a full_name column.")
-    def silver_active_users() -> DataFrame:
-        return _compute_silver_active_users(spark)
+        @materialized_view(comment="Active users enriched with a full_name column.")
+        def silver_active_users() -> DataFrame:
+            return _compute_silver_active_users(spark)
 
-    # -----------------------------------------------------------------------
-    # Gold layer – aggregated / business-ready
-    # -----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
+        # Gold layer – aggregated / business-ready
+        # -----------------------------------------------------------------------
 
-    @materialized_view(comment="Aggregated count of active users per country.")
-    def gold_user_count_by_country() -> DataFrame:
-        return _compute_gold_user_count_by_country(spark)
+        @materialized_view(comment="Aggregated count of active users per country.")
+        def gold_user_count_by_country() -> DataFrame:
+            return _compute_gold_user_count_by_country(spark)
+
+    except PySparkRuntimeError:
+        pass
 
 
 # ===========================================================================
@@ -192,72 +197,76 @@ def register_customer_pipeline(spark: SparkSession) -> None:
         spark: The active ``SparkSession`` for this pipeline run.
     """
 
-    # -----------------------------------------------------------------------
-    # Bronze layer – raw Parquet ingestion
-    # -----------------------------------------------------------------------
+    try:
+        # -----------------------------------------------------------------------
+        # Bronze layer – raw Parquet ingestion
+        # -----------------------------------------------------------------------
 
-    @table(
-        comment=(
-            "Raw customer records ingested from Parquet source files. "
-            "No transformations are applied at this layer."
-        ),
-    )
-    def bronze_customers() -> DataFrame:
-        return _compute_bronze_customers(spark)
+        @table(
+            comment=(
+                "Raw customer records ingested from Parquet source files. "
+                "No transformations are applied at this layer."
+            ),
+        )
+        def bronze_customers() -> DataFrame:
+            return _compute_bronze_customers(spark)
 
-    # -----------------------------------------------------------------------
-    # Silver layer – validated, cleansed, and enriched
-    # -----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
+        # Silver layer – validated, cleansed, and enriched
+        # -----------------------------------------------------------------------
 
-    @materialized_view(
-        comment=(
-            "Active, valid customer records enriched with a full_name column "
-            "and a revenue_tier classification."
-        ),
-    )
-    def silver_valid_customers() -> DataFrame:
-        return _compute_silver_valid_customers(spark)
+        @materialized_view(
+            comment=(
+                "Active, valid customer records enriched with a full_name column "
+                "and a revenue_tier classification."
+            ),
+        )
+        def silver_valid_customers() -> DataFrame:
+            return _compute_silver_valid_customers(spark)
 
-    # -----------------------------------------------------------------------
-    # Gold layer – aggregated business metrics
-    # -----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
+        # Gold layer – aggregated business metrics
+        # -----------------------------------------------------------------------
 
-    @materialized_view(
-        comment="Aggregated customer count and revenue metrics grouped by country.",
-    )
-    def gold_revenue_by_country() -> DataFrame:
-        return _compute_gold_revenue_by_country(spark)
+        @materialized_view(
+            comment="Aggregated customer count and revenue metrics grouped by country.",
+        )
+        def gold_revenue_by_country() -> DataFrame:
+            return _compute_gold_revenue_by_country(spark)
 
-    @materialized_view(
-        comment=(
-            "Aggregated customer count and revenue broken down by country "
-            "and revenue tier (Bronze / Silver / Gold / Platinum)."
-        ),
-    )
-    def gold_revenue_by_segment() -> DataFrame:
-        return _compute_gold_revenue_by_segment(spark)
+        @materialized_view(
+            comment=(
+                "Aggregated customer count and revenue broken down by country "
+                "and revenue tier (Bronze / Silver / Gold / Platinum)."
+            ),
+        )
+        def gold_revenue_by_segment() -> DataFrame:
+            return _compute_gold_revenue_by_segment(spark)
 
-    # -----------------------------------------------------------------------
-    # Dimension layer – SCD tables
-    # -----------------------------------------------------------------------
+        # -----------------------------------------------------------------------
+        # Dimension layer – SCD tables
+        # -----------------------------------------------------------------------
 
-    @table(
-        comment=(
-            "SCD Type 1 customer dimension. "
-            "Each customer_id has exactly one row representing the latest state. "
-            "Previous attribute values are overwritten and not retained."
-        ),
-    )
-    def dim_customers_scd1() -> DataFrame:
-        return _compute_dim_customers_scd1(spark)
+        @table(
+            comment=(
+                "SCD Type 1 customer dimension. "
+                "Each customer_id has exactly one row representing the latest state. "
+                "Previous attribute values are overwritten and not retained."
+            ),
+        )
+        def dim_customers_scd1() -> DataFrame:
+            return _compute_dim_customers_scd1(spark)
 
-    @table(
-        comment=(
-            "SCD Type 2 customer dimension. "
-            "All historical attribute changes are preserved. "
-            "Each row carries effective_from, effective_to (NULL if current), "
-            "and is_current to identify the active record for a customer."
-        ),
-    )
-    def dim_customers_scd2() -> DataFrame:
-        return _compute_dim_customers_scd2(spark)
+        @table(
+            comment=(
+                "SCD Type 2 customer dimension. "
+                "All historical attribute changes are preserved. "
+                "Each row carries effective_from, effective_to (NULL if current), "
+                "and is_current to identify the active record for a customer."
+            ),
+        )
+        def dim_customers_scd2() -> DataFrame:
+            return _compute_dim_customers_scd2(spark)
+
+    except PySparkRuntimeError:
+        pass
