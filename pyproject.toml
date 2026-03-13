@@ -18,6 +18,9 @@ dev = [
     "pytest-cov>=5.0.0",
     "pre-commit>=3.7.0",
     "ruff>=0.4.0",
+    "bandit>=1.7.0",
+    "interrogate>=1.7.0",
+    "detect-secrets>=1.4.0",
 ]
 
 [tool.pytest.ini_options]
@@ -41,3 +44,14 @@ ignore = []
 
 [tool.ruff.lint.isort]
 known-first-party = ["pipeline"]
+
+[tool.bandit]
+skips = ["B101"]  # assert statements are standard in pytest tests
+
+[tool.interrogate]
+ignore-init-method = true
+ignore-init-module = true
+ignore-private = true
+fail-under = 80
+verbose = 0
+quiet = false

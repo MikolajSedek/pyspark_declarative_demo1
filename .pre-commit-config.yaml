@@ -11,12 +11,36 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
-  # Ruff – fast Python linter and formatter (replaces flake8, isort, pyupgrade, …)
+  # Ruff – fast Python linter and formatter
+  # Covers isort (rule "I") and black-compatible formatting (ruff-format),
+  # so separate isort / black hooks are not required.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.10
     hooks:
-      # Linting
+      # Linting (includes isort rules)
       - id: ruff
         args: [--fix]
-      # Formatting (replaces black)
+      # Formatting (black-compatible)
       - id: ruff-format
+
+  # Bandit – security linter
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        args: ["-c", "pyproject.toml"]
+
+  # interrogate – docstring coverage
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.7.0
+    hooks:
+      - id: interrogate
+        args: ["--config", "pyproject.toml"]
+
+  # detect-secrets – prevent committing secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: (\.secrets\.baseline|requirements\.txt)
