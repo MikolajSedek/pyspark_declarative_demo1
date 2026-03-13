@@ -1,80 +1,145 @@
-"""Declarative pipeline that loads Parquet files and builds SCD dimension tables.
+"""Pipeline definitions for the PySpark Declarative Pipelines demo.
 
-This module defines a **Bronze → Silver → Gold + Dimension** pipeline using
-the ``pyspark.pipelines`` API (Apache Spark 4.0).
+This module registers all datasets for both pipelines using the
+``pyspark.pipelines`` API (introduced in Apache Spark 4.0).
 
-Pipeline overview
------------------
-.. code-block:: text
+Pipeline 1 – User CSV pipeline
+    Reads user records from a CSV file and builds a Bronze → Silver → Gold
+    medallion architecture.
 
-    Parquet files
-         │
-    bronze_customers   (@table, raw Parquet ingestion)
-         │
-    silver_valid_customers  (@materialized_view, filtered + enriched)
-         │
-    ┌────┴────┐
-    │         │
-    gold_revenue_by_country   (@materialized_view, country-level aggregation)
-    gold_revenue_by_segment   (@materialized_view, segment-level aggregation)
-         │
-    dim_customers_scd1   (@table, SCD Type 1 – latest record per customer)
-    dim_customers_scd2   (@table, SCD Type 2 – full history with effective dates)
+    .. code-block:: text
 
-SCD Type 1 (``dim_customers_scd1``)
-    Overwrites each customer's row with the most recent attribute values.
-    No history is preserved.
+        CSV file
+             │
+        bronze_users            (@table, raw CSV ingestion)
+             │
+        silver_active_users     (@materialized_view, filtered + full_name)
+             │
+        gold_user_count_by_country  (@materialized_view, country aggregation)
 
-SCD Type 2 (``dim_customers_scd2``)
-    Maintains a full change history.  Each row carries ``effective_from``,
-    ``effective_to`` (``NULL`` for the current row), and ``is_current``.
+Pipeline 2 – Customer Parquet + SCD pipeline
+    Reads customer records from Parquet files and builds a
+    Bronze → Silver → Gold + Dimension architecture with Slowly Changing
+    Dimension tables.
+
+    .. code-block:: text
+
+        Parquet files
+             │
+        bronze_customers            (@table, raw Parquet ingestion)
+             │
+        silver_valid_customers      (@materialized_view, filtered + enriched)
+             │
+        ┌────┴────┐
+        │         │
+        gold_revenue_by_country     (@materialized_view, country-level metrics)
+        gold_revenue_by_segment     (@materialized_view, segment-level metrics)
+             │
+        dim_customers_scd1          (@table, SCD Type 1)
+        dim_customers_scd2          (@table, SCD Type 2 with history)
 
 Usage
 -----
-The public entry point is :func:`register_pipeline`.  Pass the active
-``SparkSession`` once; all pipeline datasets are registered via the
-``@table`` / ``@materialized_view`` decorators inside the function scope,
-so no ``getActiveSession()`` call is scattered through the file.
-
-Example::
+Call :func:`register_user_pipeline` or :func:`register_customer_pipeline`
+once at startup, passing the active ``SparkSession``::
 
     from pyspark.sql import SparkSession
-    from pipeline.parquet_scd_pipeline import register_pipeline
+    from src.python.pipelines import register_user_pipeline, register_customer_pipeline
 
     spark = SparkSession.builder.getOrCreate()
-    register_pipeline(spark)
+    register_user_pipeline(spark)
+    register_customer_pipeline(spark)
 
 Reference:
     https://spark.apache.org/docs/latest/declarative-pipelines-programming-guide.html
-    https://www.palantir.com/docs/foundry/transforms-python-spark/pyspark-style-guide
 """
 
-from pyspark.errors import AnalysisException
 from pyspark.pipelines import materialized_view, table
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 
-from pipeline.scd_transformations import (
+from src.python.io import read_customers_parquet, read_users_csv
+from src.python.transformations import (
     aggregate_revenue_by_country,
     aggregate_revenue_by_segment,
+    aggregate_user_count_by_country,
     apply_scd_type1,
     apply_scd_type2,
     enrich_with_full_name,
     enrich_with_revenue_tier,
     filter_active_customers,
+    filter_active_users,
     filter_valid_customers,
 )
 
-# ---------------------------------------------------------------------------
-# Layer computation helpers
-# Each helper takes a SparkSession and returns a plain DataFrame.
-# These are independently testable without the pipeline decorator.
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# Pipeline 1 – User CSV pipeline
+# Bronze → Silver → Gold medallion architecture
+# ===========================================================================
+
+
+def _compute_bronze_users(spark: SparkSession) -> DataFrame:
+    """Read raw user CSV files into the Bronze layer."""
+    return read_users_csv(spark)
+
+
+def _compute_silver_active_users(spark: SparkSession) -> DataFrame:
+    """Filter inactive users and add a ``full_name`` derived column."""
+    bronze_df = spark.table("bronze_users")
+    active_df = filter_active_users(bronze_df)
+    return enrich_with_full_name(active_df)
+
+
+def _compute_gold_user_count_by_country(spark: SparkSession) -> DataFrame:
+    """Aggregate active users by country for reporting."""
+    silver_df = spark.table("silver_active_users")
+    return aggregate_user_count_by_country(silver_df)
+
+
+def register_user_pipeline(spark: SparkSession) -> None:
+    """Register all User CSV pipeline datasets with the Spark Pipelines runner.
+
+    Registers Bronze, Silver, and Gold datasets for the CSV user pipeline.
+    All datasets are discoverable by the pipeline runner after this call.
+
+    Args:
+        spark: The active ``SparkSession`` for this pipeline run.
+    """
+
+    # -----------------------------------------------------------------------
+    # Bronze layer – raw CSV ingestion
+    # -----------------------------------------------------------------------
+
+    @table(comment="Raw user records ingested from the CSV source.")
+    def bronze_users() -> DataFrame:
+        return _compute_bronze_users(spark)
+
+    # -----------------------------------------------------------------------
+    # Silver layer – cleansed & enriched
+    # -----------------------------------------------------------------------
+
+    @materialized_view(comment="Active users enriched with a full_name column.")
+    def silver_active_users() -> DataFrame:
+        return _compute_silver_active_users(spark)
+
+    # -----------------------------------------------------------------------
+    # Gold layer – aggregated / business-ready
+    # -----------------------------------------------------------------------
+
+    @materialized_view(comment="Aggregated count of active users per country.")
+    def gold_user_count_by_country() -> DataFrame:
+        return _compute_gold_user_count_by_country(spark)
+
+
+# ===========================================================================
+# Pipeline 2 – Customer Parquet + SCD pipeline
+# Bronze → Silver → Gold + Dimension architecture
+# ===========================================================================
 
 
 def _compute_bronze_customers(spark: SparkSession) -> DataFrame:
     """Read raw customer Parquet files into the Bronze layer."""
-    return spark.read.parquet("data/customers/")
+    return read_customers_parquet(spark)
 
 
 def _compute_silver_valid_customers(spark: SparkSession) -> DataFrame:
@@ -109,9 +174,9 @@ def _compute_dim_customers_scd2(spark: SparkSession) -> DataFrame:
     """
     silver_df = spark.table("silver_valid_customers")
 
-    try:
+    if spark.catalog.tableExists("dim_customers_scd2"):
         existing_scd2 = spark.table("dim_customers_scd2")
-    except AnalysisException:
+    else:
         existing_scd2 = spark.createDataFrame(
             [],
             schema=(
@@ -129,20 +194,12 @@ def _compute_dim_customers_scd2(spark: SparkSession) -> DataFrame:
     return apply_scd_type2(existing_scd2, incoming_df)
 
 
-# ---------------------------------------------------------------------------
-# Pipeline registration
-# The SparkSession is provided once; all @table / @materialized_view
-# definitions close over it so getActiveSession() is not scattered.
-# ---------------------------------------------------------------------------
+def register_customer_pipeline(spark: SparkSession) -> None:
+    """Register all Customer Parquet + SCD pipeline datasets with the runner.
 
-
-def register_pipeline(spark: SparkSession) -> None:
-    """Register all pipeline datasets with the Spark Pipelines runner.
-
-    Call this function once at pipeline startup, passing the active
-    ``SparkSession``.  All Bronze, Silver, Gold, and Dimension datasets are
-    registered via ``@table`` / ``@materialized_view`` decorators and are
-    subsequently discoverable by the pipeline runner.
+    Registers Bronze, Silver, Gold, and Dimension datasets for the Parquet
+    customer pipeline.  All datasets are discoverable by the pipeline runner
+    after this call.
 
     Args:
         spark: The active ``SparkSession`` for this pipeline run.

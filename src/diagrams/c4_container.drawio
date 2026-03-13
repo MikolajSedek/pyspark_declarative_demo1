@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  C4 Level 2 – Container Diagram
+  PySpark Declarative Pipelines Demo
+
+  Shows the internal containers (modules) of the system and their
+  relationships.  Each container maps to a Python module in src/python/.
+-->
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1"
+              tooltips="1" connect="1" arrows="1" fold="1" page="1"
+              pageScale="1" pageWidth="1169" pageHeight="827"
+              math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- Title -->
+    <mxCell id="title" value="C4 Level 2 – Container Diagram: PySpark Declarative Pipelines Demo"
+            style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1"
+            vertex="1" parent="1">
+      <mxGeometry x="150" y="20" width="869" height="40" as="geometry" />
+    </mxCell>
+
+    <!-- System boundary -->
+    <mxCell id="boundary" value="PySpark Declarative Pipelines Demo [Software System]"
+            style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.lean_mapping.electronic_info_store_2;html=1;whiteSpace=wrap;fillColor=none;strokeColor=#444444;strokeWidth=2;dashed=1;fontSize=13;fontStyle=1;verticalAlign=top;"
+            vertex="1" parent="1">
+      <mxGeometry x="220" y="80" width="729" height="630" as="geometry" />
+    </mxCell>
+
+    <!-- ===== Container: pipelines.py ===== -->
+    <mxCell id="pipelines" value="&lt;b&gt;pipelines.py&lt;/b&gt;&lt;br/&gt;[Python Module]&lt;br/&gt;&lt;br/&gt;Declares all Bronze, Silver, Gold, and&lt;br/&gt;Dimension pipeline datasets using&lt;br/&gt;@table / @materialized_view decorators.&lt;br/&gt;Entry points: register_user_pipeline(),&lt;br/&gt;register_customer_pipeline()."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="390" y="140" width="250" height="160" as="geometry" />
+    </mxCell>
+
+    <!-- ===== Container: io.py ===== -->
+    <mxCell id="io" value="&lt;b&gt;io.py&lt;/b&gt;&lt;br/&gt;[Python Module]&lt;br/&gt;&lt;br/&gt;Reads raw data from external&lt;br/&gt;sources.&lt;br/&gt;read_users_csv()&lt;br/&gt;read_customers_parquet()"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="250" y="390" width="200" height="150" as="geometry" />
+    </mxCell>
+
+    <!-- ===== Container: transformations.py ===== -->
+    <mxCell id="transformations" value="&lt;b&gt;transformations.py&lt;/b&gt;&lt;br/&gt;[Python Module]&lt;br/&gt;&lt;br/&gt;All pure DataFrame transformations:&lt;br/&gt;filtering, enrichment, aggregation,&lt;br/&gt;SCD Type 1 &amp; Type 2 merge logic."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="500" y="390" width="220" height="150" as="geometry" />
+    </mxCell>
+
+    <!-- ===== Container: utils.py ===== -->
+    <mxCell id="utils" value="&lt;b&gt;utils.py&lt;/b&gt;&lt;br/&gt;[Python Module]&lt;br/&gt;&lt;br/&gt;Shared helpers:&lt;br/&gt;deduplicate_by_latest(),&lt;br/&gt;SCD2 building-block functions,&lt;br/&gt;SCD2_TRACKED_COLUMNS constant."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="770" y="390" width="160" height="150" as="geometry" />
+    </mxCell>
+
+    <!-- ===== External: CSV files ===== -->
+    <mxCell id="csv_ext" value="&lt;b&gt;CSV Files&lt;/b&gt;&lt;br/&gt;[External: data/users.csv]&lt;br/&gt;&lt;br/&gt;Raw user records."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;fontColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="390" width="150" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- ===== External: Parquet files ===== -->
+    <mxCell id="parquet_ext" value="&lt;b&gt;Parquet Files&lt;/b&gt;&lt;br/&gt;[External: data/customers/]&lt;br/&gt;&lt;br/&gt;Raw customer records."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;fontColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="510" width="150" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- ===== External: Spark Pipelines Runner ===== -->
+    <mxCell id="spark_runner" value="&lt;b&gt;Spark Pipelines Runner&lt;/b&gt;&lt;br/&gt;[External: spark-pipelines CLI]&lt;br/&gt;&lt;br/&gt;Resolves dataset dependencies&lt;br/&gt;and executes the pipeline."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;fontColor=#ffffff;strokeColor=#666666;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="390" y="620" width="250" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- ===== Tests ===== -->
+    <mxCell id="tests" value="&lt;b&gt;tests/&lt;/b&gt;&lt;br/&gt;[Test Suite: pytest]&lt;br/&gt;&lt;br/&gt;test_pipeline.py&lt;br/&gt;test_scd_transformations.py"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;fontColor=#333333;strokeColor=#82b366;fontSize=11;arcSize=5;dashed=1;"
+            vertex="1" parent="1">
+      <mxGeometry x="970" y="200" width="170" height="120" as="geometry" />
+    </mxCell>
+
+    <!-- ===== Relationships ===== -->
+
+    <!-- pipelines → io -->
+    <mxCell id="rel_pip_io" value="calls"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;"
+            edge="1" source="pipelines" target="io" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- pipelines → transformations -->
+    <mxCell id="rel_pip_trans" value="calls"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;"
+            edge="1" source="pipelines" target="transformations" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- transformations → utils -->
+    <mxCell id="rel_trans_utils" value="uses"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;"
+            edge="1" source="transformations" target="utils" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- CSV ext → io -->
+    <mxCell id="rel_csv_io" value="reads"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;"
+            edge="1" source="csv_ext" target="io" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Parquet ext → io -->
+    <mxCell id="rel_parquet_io" value="reads"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;"
+            edge="1" source="parquet_ext" target="io" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Spark Runner → pipelines -->
+    <mxCell id="rel_spark_pip" value="executes"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;"
+            edge="1" source="spark_runner" target="pipelines" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- tests → transformations -->
+    <mxCell id="rel_test_trans" value="tests"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;dashed=1;strokeColor=#82b366;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;"
+            edge="1" source="tests" target="transformations" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- tests → utils -->
+    <mxCell id="rel_test_utils" value="tests"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;dashed=1;strokeColor=#82b366;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;"
+            edge="1" source="tests" target="utils" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Legend -->
+    <mxCell id="legend_title" value="Legend"
+            style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1"
+            vertex="1" parent="1">
+      <mxGeometry x="970" y="370" width="80" height="25" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_module" value="Python Module"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="970" y="400" width="120" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_ext" value="External System"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;fontColor=#ffffff;strokeColor=#666666;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="970" y="445" width="120" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_test" value="Test Suite"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;fontColor=#333333;strokeColor=#82b366;fontSize=10;arcSize=5;dashed=1;"
+            vertex="1" parent="1">
+      <mxGeometry x="970" y="490" width="120" height="30" as="geometry" />
+    </mxCell>
+  </root>
+</mxGraphModel>

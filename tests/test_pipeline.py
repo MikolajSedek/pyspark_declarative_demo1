@@ -1,7 +1,7 @@
 """Unit tests for pipeline transformation functions.
 
 These tests exercise the pure-Python transformation logic in
-``pipeline.transformations`` using a local SparkSession provided by the
+``src.python.transformations`` using a local SparkSession provided by the
 ``spark`` fixture defined in ``conftest.py``.
 
 Following pytest best-practices:
@@ -14,7 +14,7 @@ import pytest
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import BooleanType, StringType, StructField, StructType
 
-from pipeline.transformations import (
+from src.python.transformations import (
     aggregate_user_count_by_country,
     enrich_with_full_name,
     filter_active_users,
@@ -138,6 +138,31 @@ def test_enrich_with_full_name_concatenates_correctly(
     expected_full_name: str,
 ) -> None:
     """``full_name`` must equal ``first_name`` + ' ' + ``last_name``."""
+    data = [("x", first_name, last_name, "US", True)]
+    df = spark.createDataFrame(data, schema=USER_SCHEMA)
+    result = enrich_with_full_name(df)
+    assert result.collect()[0]["full_name"] == expected_full_name
+
+
+@pytest.mark.parametrize(
+    ("first_name", "last_name", "expected_full_name"),
+    [
+        (None, "Smith", "Smith"),
+        ("Alice", None, "Alice"),
+        (None, None, ""),
+    ],
+)
+def test_enrich_with_full_name_null_safe(
+    spark: SparkSession,
+    first_name: str | None,
+    last_name: str | None,
+    expected_full_name: str,
+) -> None:
+    """``full_name`` must not be null when one or both name parts are null.
+
+    A null ``first_name`` or ``last_name`` must be silently omitted rather than
+    propagating null to the output column.
+    """
     data = [("x", first_name, last_name, "US", True)]
     df = spark.createDataFrame(data, schema=USER_SCHEMA)
     result = enrich_with_full_name(df)
