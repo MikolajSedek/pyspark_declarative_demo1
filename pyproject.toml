@@ -7,7 +7,7 @@ name = "pyspark-declarative-demo"
 version = "0.1.0"
 description = "A demo project for Spark Declarative Pipelines"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "pyspark>=4.0.0",
 ]
@@ -32,7 +32,7 @@ testpaths = ["tests"]
 addopts = "-v --tb=short"
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
 line-length = 88
 
 [tool.ruff.lint]

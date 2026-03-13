@@ -26,6 +26,8 @@ Reference:
     https://www.palantir.com/docs/foundry/transforms-python-spark/pyspark-style-guide
 """
 
+from collections.abc import Sequence
+
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
@@ -96,6 +98,10 @@ def filter_active_customers(df: DataFrame) -> DataFrame:
 def enrich_with_full_name(df: DataFrame) -> DataFrame:
     """Add a ``full_name`` column by concatenating ``first_name`` and ``last_name``.
 
+    Uses ``concat_ws`` so that a null in either name component does not
+    propagate null to the output – the non-null part is preserved and both-null
+    inputs yield an empty string rather than null.
+
     Args:
         df: Input DataFrame with ``first_name`` and ``last_name`` string columns.
 
@@ -104,7 +110,7 @@ def enrich_with_full_name(df: DataFrame) -> DataFrame:
     """
     return df.withColumn(
         "full_name",
-        F.concat(F.col("first_name"), F.lit(" "), F.col("last_name")),
+        F.concat_ws(" ", F.col("first_name"), F.col("last_name")),
     )
 
 
@@ -220,7 +226,7 @@ def apply_scd_type1(df: DataFrame) -> DataFrame:
 def apply_scd_type2(
     existing_scd2: DataFrame,
     incoming: DataFrame,
-    tracked_cols: list[str] | None = None,
+    tracked_cols: Sequence[str] | None = None,
 ) -> DataFrame:
     """Apply SCD Type 2 merge logic to produce an updated history table.
 

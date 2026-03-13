@@ -54,7 +54,6 @@ Reference:
     https://spark.apache.org/docs/latest/declarative-pipelines-programming-guide.html
 """
 
-from pyspark.errors import AnalysisException
 from pyspark.pipelines import materialized_view, table
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
@@ -175,9 +174,9 @@ def _compute_dim_customers_scd2(spark: SparkSession) -> DataFrame:
     """
     silver_df = spark.table("silver_valid_customers")
 
-    try:
+    if spark.catalog.tableExists("dim_customers_scd2"):
         existing_scd2 = spark.table("dim_customers_scd2")
-    except AnalysisException:
+    else:
         existing_scd2 = spark.createDataFrame(
             [],
             schema=(

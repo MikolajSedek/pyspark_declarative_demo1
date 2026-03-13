@@ -264,14 +264,13 @@ hash, so subsequent runs are fast.
 
 ### `tests` job
 
-Runs the full pytest suite across a **Python 3.10 / 3.11 / 3.12 matrix** on
-`ubuntu-latest`.  Java 17 (Temurin) is installed alongside each Python version
-because Apache Spark requires a JVM.
+Runs the full pytest suite on **Python 3.12** on `ubuntu-latest`.  Java 17
+(Temurin) is installed because Apache Spark requires a JVM.  Coverage XML is
+uploaded as a workflow artifact for review.
 
 ```
-ubuntu-latest × Python 3.10  ──┐
-ubuntu-latest × Python 3.11  ──┼─ pytest --cov=src/python
-ubuntu-latest × Python 3.12  ──┘         (coverage XML uploaded as artifact)
+ubuntu-latest × Python 3.12 ── pytest --cov=src/python
+                                       (coverage XML uploaded as artifact)
 ```
 
 The two jobs run **in parallel** for fastest total feedback.  Each job cancels

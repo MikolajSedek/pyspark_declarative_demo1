@@ -48,21 +48,14 @@ jobs:
         uses: pre-commit/action@v3.0.1
 
   # ---------------------------------------------------------------------------
-  # Job 2: Tests – pytest across multiple Python versions
+  # Job 2: Tests – pytest on Python 3.12
   #
-  # Matrix: Python 3.10, 3.11, 3.12 × ubuntu-latest
   # Requires Java 17 (Temurin) because Apache Spark runs on the JVM.
-  # Coverage XML is uploaded as a workflow artifact on the Python 3.12 run.
+  # Coverage XML is uploaded as a workflow artifact for review.
   # ---------------------------------------------------------------------------
   tests:
-    name: Tests (Python ${{ matrix.python-version }})
+    name: Tests (Python 3.12)
     runs-on: ubuntu-latest
-
-    strategy:
-      # Keep going if one Python version fails so we see the full picture.
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
       - name: Checkout repository
@@ -76,10 +69,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
           cache: pip
 
       - name: Install project with dev dependencies
@@ -98,9 +91,7 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing
 
-      # Upload the coverage report only once (from the highest Python version).
       - name: Upload coverage report
-        if: matrix.python-version == '3.12'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report

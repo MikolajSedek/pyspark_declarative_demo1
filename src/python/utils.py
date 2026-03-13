@@ -12,7 +12,9 @@ Reference:
     https://www.palantir.com/docs/foundry/transforms-python-spark/pyspark-style-guide
 """
 
-from pyspark.sql import DataFrame, Window
+from collections.abc import Sequence
+
+from pyspark.sql import Column, DataFrame, Window
 from pyspark.sql import functions as F
 
 # ---------------------------------------------------------------------------
@@ -50,7 +52,8 @@ def deduplicate_by_latest(
 # ---------------------------------------------------------------------------
 
 # Columns whose changes trigger a new SCD2 history row.
-SCD2_TRACKED_COLUMNS: list[str] = [
+# Declared as a tuple so callers cannot accidentally mutate the default.
+SCD2_TRACKED_COLUMNS: tuple[str, ...] = (
     "first_name",
     "last_name",
     "email",
@@ -59,10 +62,10 @@ SCD2_TRACKED_COLUMNS: list[str] = [
     "customer_segment",
     "revenue_ytd",
     "is_active",
-]
+)
 
 
-def build_change_hash(df: DataFrame, alias: str, tracked_cols: list[str]) -> "Column":  # noqa: F821
+def build_change_hash(alias: str, tracked_cols: Sequence[str]) -> Column:
     """Return a SHA-256 hash Column of the concatenated ``tracked_cols`` values.
 
     The hash is computed over the concatenation of all tracked column values
@@ -71,13 +74,13 @@ def build_change_hash(df: DataFrame, alias: str, tracked_cols: list[str]) -> "Co
     table and the incoming snapshot.
 
     Args:
-        df: DataFrame with columns named ``alias.<col>`` after a join.
         alias: The DataFrame alias used in the join (e.g. ``"new"`` or
             ``"old"``).
-        tracked_cols: List of column names whose values contribute to the hash.
+        tracked_cols: Sequence of column names whose values contribute to the
+            hash.
 
     Returns:
-        Scalar Column expression representing the SHA-256 hash.
+        Column expression representing the SHA-256 hash.
     """
     return F.sha2(
         F.concat_ws(
@@ -134,7 +137,7 @@ def join_incoming_with_current(
 
 def detect_changed_or_new(
     joined: DataFrame,
-    tracked_cols: list[str],
+    tracked_cols: Sequence[str],
 ) -> DataFrame:
     """Filter the join result to rows that are new or have changed attributes.
 
@@ -149,8 +152,8 @@ def detect_changed_or_new(
     Returns:
         Subset of ``joined`` containing only new or changed customer rows.
     """
-    new_hash = build_change_hash(joined, "new", tracked_cols)
-    old_hash = build_change_hash(joined, "old", tracked_cols)
+    new_hash = build_change_hash("new", tracked_cols)
+    old_hash = build_change_hash("old", tracked_cols)
     return joined.filter(F.col("old.customer_id").isNull() | (new_hash != old_hash))
 
 

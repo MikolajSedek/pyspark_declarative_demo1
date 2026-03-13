@@ -48,7 +48,7 @@ from src.python.transformations import (
     filter_active_customers,
     filter_valid_customers,
 )
-from src.python.utils import deduplicate_by_latest
+from src.python.utils import SCD2_TRACKED_COLUMNS, deduplicate_by_latest
 
 # ---------------------------------------------------------------------------
 # Schemas
@@ -631,3 +631,51 @@ def test_scd2_only_one_current_row_per_customer(
         .filter(F.col("cnt") > 1)
     )
     assert duplicates.count() == 0
+
+
+# ---------------------------------------------------------------------------
+# SCD2_TRACKED_COLUMNS – constant contract
+# ---------------------------------------------------------------------------
+
+
+def test_scd2_tracked_columns_is_immutable() -> None:
+    """``SCD2_TRACKED_COLUMNS`` must be a tuple so callers cannot mutate it."""
+    assert isinstance(SCD2_TRACKED_COLUMNS, tuple), (
+        "SCD2_TRACKED_COLUMNS must be a tuple to prevent accidental mutation"
+    )
+
+
+def test_scd2_tracked_columns_contains_expected_fields() -> None:
+    """``SCD2_TRACKED_COLUMNS`` must include all business-critical attributes."""
+    required = {"first_name", "last_name", "email", "country", "revenue_ytd", "is_active"}
+    assert required.issubset(set(SCD2_TRACKED_COLUMNS))
+
+
+# ---------------------------------------------------------------------------
+# enrich_with_full_name – null safety
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("first_name", "last_name", "expected"),
+    [
+        (None, "Smith", "Smith"),
+        ("Carlo", None, "Carlo"),
+        (None, None, ""),
+    ],
+)
+def test_enrich_with_full_name_null_safe(
+    spark: SparkSession,
+    first_name: str | None,
+    last_name: str | None,
+    expected: str,
+) -> None:
+    """A null name component must not propagate null into the full_name column.
+
+    A null ``first_name`` or ``last_name`` is silently omitted.  When both are
+    null the result is an empty string, never null.
+    """
+    row = _cust("C001", first_name, last_name, "US", "NYC", "Retail", 0.0, True, TS_JAN)
+    df = spark.createDataFrame([row], schema=CUSTOMER_SCHEMA)
+    result = enrich_with_full_name(df)
+    assert result.collect()[0]["full_name"] == expected

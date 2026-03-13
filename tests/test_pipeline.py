@@ -144,6 +144,31 @@ def test_enrich_with_full_name_concatenates_correctly(
     assert result.collect()[0]["full_name"] == expected_full_name
 
 
+@pytest.mark.parametrize(
+    ("first_name", "last_name", "expected_full_name"),
+    [
+        (None, "Smith", "Smith"),
+        ("Alice", None, "Alice"),
+        (None, None, ""),
+    ],
+)
+def test_enrich_with_full_name_null_safe(
+    spark: SparkSession,
+    first_name: str | None,
+    last_name: str | None,
+    expected_full_name: str,
+) -> None:
+    """``full_name`` must not be null when one or both name parts are null.
+
+    A null ``first_name`` or ``last_name`` must be silently omitted rather than
+    propagating null to the output column.
+    """
+    data = [("x", first_name, last_name, "US", True)]
+    df = spark.createDataFrame(data, schema=USER_SCHEMA)
+    result = enrich_with_full_name(df)
+    assert result.collect()[0]["full_name"] == expected_full_name
+
+
 # ---------------------------------------------------------------------------
 # aggregate_user_count_by_country
 # ---------------------------------------------------------------------------
