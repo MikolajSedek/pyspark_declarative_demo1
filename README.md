@@ -1,7 +1,7 @@
 # PySpark Declarative Pipelines Demo
 
 A demo project showcasing **Apache Spark Declarative Pipelines** (introduced in
-Spark 4.0) with a clean, testable project structure.
+Spark 4.0) with a clean, testable, and well-structured project architecture.
 
 > Reference: <https://spark.apache.org/docs/latest/declarative-pipelines-programming-guide.html>
 
@@ -19,7 +19,7 @@ This repo contains **two complete pipelines**, both following the
 
 ---
 
-## Pipeline 1 – User CSV Pipeline (`pipeline/demo_pipeline.py`)
+## Pipeline 1 – User CSV Pipeline
 
 A **Bronze → Silver → Gold** medallion pipeline for a fictional user dataset
 loaded from CSV.
@@ -32,19 +32,19 @@ loaded from CSV.
 
 ---
 
-## Pipeline 2 – Customer Parquet + SCD Pipeline (`pipeline/parquet_scd_pipeline.py`)
+## Pipeline 2 – Customer Parquet + SCD Pipeline
 
 A **Bronze → Silver → Gold + Dimension** pipeline for a customer dataset loaded
 from Parquet files, extended with Slowly Changing Dimension (SCD) tables.
 
-| Layer     | Dataset                      | Description                                      |
-|-----------|------------------------------|--------------------------------------------------|
-| Bronze    | `bronze_customers`           | Raw Parquet ingestion                            |
-| Silver    | `silver_valid_customers`     | Filtered (valid + active) + `full_name` + `revenue_tier` |
-| Gold      | `gold_revenue_by_country`    | Customer count & revenue by country              |
-| Gold      | `gold_revenue_by_segment`    | Customer count & revenue by country + tier       |
-| Dimension | `dim_customers_scd1`         | SCD Type 1 – latest record per customer          |
-| Dimension | `dim_customers_scd2`         | SCD Type 2 – full history with effective dates   |
+| Layer     | Dataset                      | Description                                                      |
+|-----------|------------------------------|------------------------------------------------------------------|
+| Bronze    | `bronze_customers`           | Raw Parquet ingestion                                            |
+| Silver    | `silver_valid_customers`     | Filtered (valid + active) + `full_name` + `revenue_tier`         |
+| Gold      | `gold_revenue_by_country`    | Customer count & revenue by country                              |
+| Gold      | `gold_revenue_by_segment`    | Customer count & revenue by country + tier                       |
+| Dimension | `dim_customers_scd1`         | SCD Type 1 – latest record per customer                          |
+| Dimension | `dim_customers_scd2`         | SCD Type 2 – full history with effective dates                   |
 
 ### SCD Type 1 – Overwrite
 
@@ -56,11 +56,11 @@ window-function `ROW_NUMBER()` deduplicate on `updated_at`.
 
 All historical attribute changes are preserved.  Each row carries:
 
-| Column          | Description                               |
-|-----------------|-------------------------------------------|
-| `effective_from` | Timestamp when this version became active |
-| `effective_to`   | Timestamp when it was superseded (`NULL` if current) |
-| `is_current`     | `True` for the active version, `False` for historical |
+| Column           | Description                                            |
+|------------------|--------------------------------------------------------|
+| `effective_from` | Timestamp when this version became active              |
+| `effective_to`   | Timestamp when it was superseded (`NULL` if current)   |
+| `is_current`     | `True` for the active version, `False` for historical  |
 
 The merge algorithm (implemented in pure PySpark without Delta Lake `MERGE`):
 
@@ -78,22 +78,49 @@ The merge algorithm (implemented in pure PySpark without Delta Lake `MERGE`):
 
 ```
 pyspark_declarative_demo1/
-├── pipeline/
-│   ├── __init__.py
-│   ├── demo_pipeline.py          # Pipeline 1 – CSV users (Bronze→Silver→Gold)
-│   ├── transformations.py        # Pure transformation functions for pipeline 1
-│   ├── parquet_scd_pipeline.py   # Pipeline 2 – Parquet customers + SCD dims
-│   └── scd_transformations.py    # Pure transformation functions for pipeline 2
+├── src/
+│   ├── python/
+│   │   ├── __init__.py
+│   │   ├── io.py               # I/O helpers – read CSV / Parquet sources
+│   │   ├── transformations.py  # All pure DataFrame transformations (both pipelines)
+│   │   ├── utils.py            # Shared utilities: deduplication, SCD2 helpers
+│   │   └── pipelines.py        # Pipeline definitions (register_user_pipeline,
+│   │                           #   register_customer_pipeline)
+│   └── diagrams/
+│       ├── c4_context.drawio   # C4 Level 1 – System Context diagram
+│       ├── c4_container.drawio # C4 Level 2 – Container diagram
+│       └── c4_pipelines.drawio # C4 Level 3 – Component / Pipelines diagram
 ├── tests/
-│   ├── conftest.py               # Shared pytest fixtures (SparkSession)
-│   ├── test_pipeline.py          # Unit tests for pipeline 1 transformations
-│   └── test_scd_transformations.py  # Unit tests for pipeline 2 transformations
+│   ├── conftest.py             # Shared pytest fixtures (SparkSession)
+│   ├── test_pipeline.py        # Unit tests for Pipeline 1 transformations
+│   └── test_scd_transformations.py  # Unit tests for Pipeline 2 transformations
 ├── notebooks/
-│   └── demo_pipeline.ipynb       # Interactive walkthrough of pipeline 1
-├── pyproject.toml                # Project metadata, pytest & ruff configuration
-├── requirements.txt              # Runtime + development dependencies
-└── .pre-commit-config.yaml       # Pre-commit hooks (ruff lint + format)
+│   └── demo_pipeline.ipynb     # Interactive walkthrough of Pipeline 1
+├── pyproject.toml              # Project metadata, pytest & ruff configuration
+└── .pre-commit-config.yaml     # Pre-commit hooks (ruff lint + format)
 ```
+
+### Module responsibilities
+
+| Module                          | Responsibility                                                         |
+|---------------------------------|------------------------------------------------------------------------|
+| `src/python/io.py`              | Read raw data from CSV and Parquet sources                             |
+| `src/python/transformations.py` | All pure filtering, enrichment, aggregation, and SCD functions         |
+| `src/python/utils.py`           | Generic helpers: deduplication, SCD2 building-blocks                   |
+| `src/python/pipelines.py`       | Pipeline registration using `@table` / `@materialized_view` decorators |
+
+---
+
+## Architecture Diagrams (C4)
+
+C4 draw.io diagrams are available in `src/diagrams/`.  Open them with
+[draw.io](https://app.diagrams.net/) or the VS Code draw.io extension.
+
+| File                   | Level      | Description                               |
+|------------------------|------------|-------------------------------------------|
+| `c4_context.drawio`    | C4 Level 1 | System context – actors and data sources  |
+| `c4_container.drawio`  | C4 Level 2 | Containers – Python modules and their roles |
+| `c4_pipelines.drawio`  | C4 Level 3 | Component – both pipelines layer by layer |
 
 ---
 
@@ -116,8 +143,8 @@ cd pyspark_declarative_demo1
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 
-# 3. Install dependencies
-pip install -r requirements.txt
+# 3. Install dependencies (including dev tools)
+pip install -e ".[dev]"
 ```
 
 ---
@@ -132,7 +159,7 @@ The test suite uses [pytest](https://docs.pytest.org/) with a session-scoped
 pytest
 
 # Run with coverage report
-pytest --cov=pipeline --cov-report=term-missing
+pytest --cov=src/python --cov-report=term-missing
 ```
 
 ### What the tests cover
@@ -176,10 +203,10 @@ server):
 
 ```bash
 # Pipeline 1 – CSV users
-spark-pipelines run pipeline/demo_pipeline.py
+spark-pipelines run src/python/pipelines.py --pipeline register_user_pipeline
 
 # Pipeline 2 – Parquet customers + SCD
-spark-pipelines run pipeline/parquet_scd_pipeline.py
+spark-pipelines run src/python/pipelines.py --pipeline register_customer_pipeline
 ```
 
 ---
@@ -200,19 +227,18 @@ pre-commit run --all-files
 
 Hooks configured in `.pre-commit-config.yaml`:
 
-| Hook | Purpose |
-|------|---------|
-| `trailing-whitespace` | Remove trailing whitespace |
-| `end-of-file-fixer` | Ensure files end with a newline |
-| `check-yaml` / `check-toml` | Validate config files |
-| `check-merge-conflict` | Detect unresolved merge markers |
-| `debug-statements` | Catch leftover `breakpoint()` / `pdb` calls |
-| `ruff` | Fast Python linting (with auto-fix) |
-| `ruff-format` | Opinionated Python formatting |
+| Hook                        | Purpose                                      |
+|-----------------------------|----------------------------------------------|
+| `trailing-whitespace`       | Remove trailing whitespace                   |
+| `end-of-file-fixer`         | Ensure files end with a newline              |
+| `check-yaml` / `check-toml` | Validate config files                        |
+| `check-merge-conflict`      | Detect unresolved merge markers              |
+| `debug-statements`          | Catch leftover `breakpoint()` / `pdb` calls  |
+| `ruff`                      | Fast Python linting (with auto-fix)          |
+| `ruff-format`               | Opinionated Python formatting                |
 
 ---
 
 ## License
 
 Apache License 2.0
-

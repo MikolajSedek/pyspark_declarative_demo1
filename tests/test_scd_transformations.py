@@ -1,8 +1,8 @@
 """Unit tests for the SCD pipeline transformation functions.
 
 These tests exercise every pure-Python transformation function defined in
-``pipeline.scd_transformations`` using a local SparkSession provided by the
-``spark`` fixture in ``conftest.py``.
+``src.python.transformations`` and ``src.python.utils`` using a local
+SparkSession provided by the ``spark`` fixture in ``conftest.py``.
 
 Test organisation
 -----------------
@@ -38,17 +38,17 @@ from pyspark.sql.types import (
     TimestampType,
 )
 
-from pipeline.scd_transformations import (
+from src.python.transformations import (
     aggregate_revenue_by_country,
     aggregate_revenue_by_segment,
     apply_scd_type1,
     apply_scd_type2,
-    deduplicate_by_latest,
     enrich_with_full_name,
     enrich_with_revenue_tier,
     filter_active_customers,
     filter_valid_customers,
 )
+from src.python.utils import deduplicate_by_latest
 
 # ---------------------------------------------------------------------------
 # Schemas

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  C4 Level 1 – System Context Diagram
+  PySpark Declarative Pipelines Demo
+
+  Shows the high-level relationship between the data pipeline system,
+  its users, and external data sources / consumers.
+-->
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1"
+              tooltips="1" connect="1" arrows="1" fold="1" page="1"
+              pageScale="1" pageWidth="1169" pageHeight="827"
+              math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- Title -->
+    <mxCell id="title" value="C4 Level 1 – System Context: PySpark Declarative Pipelines Demo"
+            style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1"
+            vertex="1" parent="1">
+      <mxGeometry x="200" y="20" width="769" height="40" as="geometry" />
+    </mxCell>
+
+    <!-- ===== External: Data Engineer (Person) ===== -->
+    <mxCell id="person1" value="&lt;b&gt;Data Engineer&lt;/b&gt;&lt;br/&gt;[Person]&lt;br/&gt;&lt;br/&gt;Designs, runs, and monitors&lt;br/&gt;the data pipelines."
+            style="shape=mxgraph.c4.person2;whiteSpace=wrap;html=1;fillColor=#08427b;fontColor=#ffffff;strokeColor=#073B6F;fontSize=12;"
+            vertex="1" parent="1">
+      <mxGeometry x="80" y="300" width="130" height="150" as="geometry" />
+    </mxCell>
+
+    <!-- ===== External: Data Analyst (Person) ===== -->
+    <mxCell id="person2" value="&lt;b&gt;Data Analyst&lt;/b&gt;&lt;br/&gt;[Person]&lt;br/&gt;&lt;br/&gt;Queries aggregated Gold&lt;br/&gt;tables for reporting."
+            style="shape=mxgraph.c4.person2;whiteSpace=wrap;html=1;fillColor=#08427b;fontColor=#ffffff;strokeColor=#073B6F;fontSize=12;"
+            vertex="1" parent="1">
+      <mxGeometry x="960" y="300" width="130" height="150" as="geometry" />
+    </mxCell>
+
+    <!-- ===== System: PySpark Declarative Pipelines Demo ===== -->
+    <mxCell id="system" value="&lt;b&gt;PySpark Declarative Pipelines Demo&lt;/b&gt;&lt;br/&gt;[Software System]&lt;br/&gt;&lt;br/&gt;Processes raw CSV and Parquet data&lt;br/&gt;through Bronze → Silver → Gold layers&lt;br/&gt;and builds SCD dimension tables."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=12;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="395" y="280" width="380" height="180" as="geometry" />
+    </mxCell>
+
+    <!-- ===== External: CSV Data Source ===== -->
+    <mxCell id="csv_source" value="&lt;b&gt;CSV Data Source&lt;/b&gt;&lt;br/&gt;[External System]&lt;br/&gt;&lt;br/&gt;Raw user records&lt;br/&gt;stored as flat CSV files."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;fontColor=#ffffff;strokeColor=#666666;fontSize=12;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="200" y="100" width="220" height="120" as="geometry" />
+    </mxCell>
+
+    <!-- ===== External: Parquet Data Source ===== -->
+    <mxCell id="parquet_source" value="&lt;b&gt;Parquet Data Source&lt;/b&gt;&lt;br/&gt;[External System]&lt;br/&gt;&lt;br/&gt;Raw customer records&lt;br/&gt;stored as Parquet files."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;fontColor=#ffffff;strokeColor=#666666;fontSize=12;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="749" y="100" width="220" height="120" as="geometry" />
+    </mxCell>
+
+    <!-- ===== External: Data Warehouse / BI Tool ===== -->
+    <mxCell id="bi_tool" value="&lt;b&gt;BI Tool / Data Warehouse&lt;/b&gt;&lt;br/&gt;[External System]&lt;br/&gt;&lt;br/&gt;Consumes Gold tables and&lt;br/&gt;SCD dimension tables."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;fontColor=#ffffff;strokeColor=#666666;fontSize=12;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="749" y="560" width="220" height="120" as="geometry" />
+    </mxCell>
+
+    <!-- ===== Relationships ===== -->
+
+    <!-- Data Engineer → System -->
+    <mxCell id="rel1" value="Runs pipelines, monitors&lt;br/&gt;data quality"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;fontColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;"
+            edge="1" source="person1" target="system" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- System → Data Analyst -->
+    <mxCell id="rel2" value="Exposes Gold tables&lt;br/&gt;for analysis"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;fontColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;"
+            edge="1" source="system" target="person2" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- CSV Source → System -->
+    <mxCell id="rel3" value="Raw CSV user records"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;fontColor=#333333;dashed=1;"
+            edge="1" source="csv_source" target="system" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Parquet Source → System -->
+    <mxCell id="rel4" value="Raw Parquet customer records"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;fontColor=#333333;dashed=1;"
+            edge="1" source="parquet_source" target="system" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- System → BI Tool -->
+    <mxCell id="rel5" value="Gold &amp; SCD dimension tables"
+            style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;fontColor=#333333;dashed=1;"
+            edge="1" source="system" target="bi_tool" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Legend -->
+    <mxCell id="legend_title" value="Legend"
+            style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="570" width="80" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_person" value="Person"
+            style="shape=mxgraph.c4.person2;whiteSpace=wrap;html=1;fillColor=#08427b;fontColor=#ffffff;strokeColor=#073B6F;fontSize=10;"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="610" width="60" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_system_box" value="Software System"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="140" y="625" width="120" height="40" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_ext_box" value="External System"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;fontColor=#ffffff;strokeColor=#666666;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="280" y="625" width="120" height="40" as="geometry" />
+    </mxCell>
+  </root>
+</mxGraphModel>

@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  C4 Level 3 – Component Diagram: Pipelines Architecture
+  PySpark Declarative Pipelines Demo
+
+  Shows the two data pipelines and how their individual dataset layers
+  (Bronze, Silver, Gold, Dimension) relate to each other and to the
+  module components in src/python/.
+-->
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1"
+              tooltips="1" connect="1" arrows="1" fold="1" page="1"
+              pageScale="1" pageWidth="1654" pageHeight="1169"
+              math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- Title -->
+    <mxCell id="title"
+            value="C4 Level 3 – Component Diagram: Pipelines Architecture"
+            style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1"
+            vertex="1" parent="1">
+      <mxGeometry x="200" y="20" width="1000" height="40" as="geometry" />
+    </mxCell>
+
+    <!-- ================================================================
+         PIPELINE 1 – User CSV Pipeline
+    ================================================================ -->
+
+    <mxCell id="p1_label"
+            value="Pipeline 1 – User CSV Pipeline  (Bronze → Silver → Gold)"
+            style="text;html=1;strokeColor=#0b4884;fillColor=#dae8fc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="80" width="400" height="36" as="geometry" />
+    </mxCell>
+
+    <!-- CSV Source -->
+    <mxCell id="p1_src"
+            value="data/users.csv"
+            style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#999999;fontColor=#ffffff;strokeColor=#666666;fontSize=10;"
+            vertex="1" parent="1">
+      <mxGeometry x="100" y="135" width="140" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- Bronze: bronze_users -->
+    <mxCell id="bronze_users"
+            value="&lt;b&gt;bronze_users&lt;/b&gt;&lt;br/&gt;[@table]&lt;br/&gt;&lt;br/&gt;read_users_csv()&lt;br/&gt;Raw CSV ingestion."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cd853f;fontColor=#ffffff;strokeColor=#8b5a2b;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="80" y="230" width="180" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- Silver: silver_active_users -->
+    <mxCell id="silver_active"
+            value="&lt;b&gt;silver_active_users&lt;/b&gt;&lt;br/&gt;[@materialized_view]&lt;br/&gt;&lt;br/&gt;filter_active_users()&lt;br/&gt;enrich_with_full_name()"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c0c0c0;fontColor=#333333;strokeColor=#888888;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="80" y="370" width="180" height="110" as="geometry" />
+    </mxCell>
+
+    <!-- Gold: gold_user_count_by_country -->
+    <mxCell id="gold_user"
+            value="&lt;b&gt;gold_user_count_by_country&lt;/b&gt;&lt;br/&gt;[@materialized_view]&lt;br/&gt;&lt;br/&gt;aggregate_user_count_by_country()"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4a017;fontColor=#333333;strokeColor=#9a7100;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="80" y="520" width="220" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- P1 arrows -->
+    <mxCell id="r_p1_src_bronze" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="p1_src" target="bronze_users" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="r_p1_b_s" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="bronze_users" target="silver_active" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="r_p1_s_g" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="silver_active" target="gold_user" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ================================================================
+         PIPELINE 2 – Customer Parquet + SCD Pipeline
+    ================================================================ -->
+
+    <mxCell id="p2_label"
+            value="Pipeline 2 – Customer Parquet + SCD Pipeline  (Bronze → Silver → Gold + Dimension)"
+            style="text;html=1;strokeColor=#006633;fillColor=#d5e8d4;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;"
+            vertex="1" parent="1">
+      <mxGeometry x="540" y="80" width="700" height="36" as="geometry" />
+    </mxCell>
+
+    <!-- Parquet Source -->
+    <mxCell id="p2_src"
+            value="data/customers/"
+            style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#999999;fontColor=#ffffff;strokeColor=#666666;fontSize=10;"
+            vertex="1" parent="1">
+      <mxGeometry x="820" y="135" width="140" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- Bronze: bronze_customers -->
+    <mxCell id="bronze_cust"
+            value="&lt;b&gt;bronze_customers&lt;/b&gt;&lt;br/&gt;[@table]&lt;br/&gt;&lt;br/&gt;read_customers_parquet()&lt;br/&gt;Raw Parquet ingestion."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cd853f;fontColor=#ffffff;strokeColor=#8b5a2b;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="800" y="230" width="180" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- Silver: silver_valid_customers -->
+    <mxCell id="silver_valid"
+            value="&lt;b&gt;silver_valid_customers&lt;/b&gt;&lt;br/&gt;[@materialized_view]&lt;br/&gt;&lt;br/&gt;filter_valid_customers()&lt;br/&gt;filter_active_customers()&lt;br/&gt;enrich_with_full_name()&lt;br/&gt;enrich_with_revenue_tier()"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c0c0c0;fontColor=#333333;strokeColor=#888888;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="800" y="370" width="180" height="140" as="geometry" />
+    </mxCell>
+
+    <!-- Gold: gold_revenue_by_country -->
+    <mxCell id="gold_country"
+            value="&lt;b&gt;gold_revenue_by_country&lt;/b&gt;&lt;br/&gt;[@materialized_view]&lt;br/&gt;&lt;br/&gt;aggregate_revenue_by_country()"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4a017;fontColor=#333333;strokeColor=#9a7100;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="620" y="560" width="200" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- Gold: gold_revenue_by_segment -->
+    <mxCell id="gold_segment"
+            value="&lt;b&gt;gold_revenue_by_segment&lt;/b&gt;&lt;br/&gt;[@materialized_view]&lt;br/&gt;&lt;br/&gt;aggregate_revenue_by_segment()"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4a017;fontColor=#333333;strokeColor=#9a7100;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="850" y="560" width="200" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- Dimension: dim_customers_scd1 -->
+    <mxCell id="dim_scd1"
+            value="&lt;b&gt;dim_customers_scd1&lt;/b&gt;&lt;br/&gt;[@table – SCD Type 1]&lt;br/&gt;&lt;br/&gt;apply_scd_type1()&lt;br/&gt;One row per customer_id;&lt;br/&gt;latest values only."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#647687;fontColor=#ffffff;strokeColor=#314354;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="620" y="720" width="200" height="120" as="geometry" />
+    </mxCell>
+
+    <!-- Dimension: dim_customers_scd2 -->
+    <mxCell id="dim_scd2"
+            value="&lt;b&gt;dim_customers_scd2&lt;/b&gt;&lt;br/&gt;[@table – SCD Type 2]&lt;br/&gt;&lt;br/&gt;apply_scd_type2()&lt;br/&gt;Full history: effective_from,&lt;br/&gt;effective_to, is_current."
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#647687;fontColor=#ffffff;strokeColor=#314354;fontSize=11;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="850" y="720" width="200" height="120" as="geometry" />
+    </mxCell>
+
+    <!-- P2 arrows -->
+    <mxCell id="r_p2_src_b" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="p2_src" target="bronze_cust" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="r_p2_b_s" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="bronze_cust" target="silver_valid" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="r_p2_s_gcountry" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="silver_valid" target="gold_country" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="r_p2_s_gseg" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="silver_valid" target="gold_segment" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="r_p2_s_scd1" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="silver_valid" target="dim_scd1" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="r_p2_s_scd2" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;" edge="1" source="silver_valid" target="dim_scd2" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ================================================================
+         Module reference box (src/python)
+    ================================================================ -->
+
+    <mxCell id="module_box_label"
+            value="src/python/ modules"
+            style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1"
+            vertex="1" parent="1">
+      <mxGeometry x="340" y="700" width="180" height="25" as="geometry" />
+    </mxCell>
+
+    <mxCell id="mod_io"
+            value="&lt;b&gt;io.py&lt;/b&gt;&lt;br/&gt;read_users_csv()&lt;br/&gt;read_customers_parquet()"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="340" y="735" width="170" height="70" as="geometry" />
+    </mxCell>
+
+    <mxCell id="mod_trans"
+            value="&lt;b&gt;transformations.py&lt;/b&gt;&lt;br/&gt;filter_*, enrich_*, aggregate_*,&lt;br/&gt;apply_scd_type1(), apply_scd_type2()"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="340" y="820" width="170" height="70" as="geometry" />
+    </mxCell>
+
+    <mxCell id="mod_utils"
+            value="&lt;b&gt;utils.py&lt;/b&gt;&lt;br/&gt;deduplicate_by_latest()&lt;br/&gt;SCD2 helper functions"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="340" y="905" width="170" height="70" as="geometry" />
+    </mxCell>
+
+    <mxCell id="mod_pipelines"
+            value="&lt;b&gt;pipelines.py&lt;/b&gt;&lt;br/&gt;register_user_pipeline()&lt;br/&gt;register_customer_pipeline()"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="340" y="990" width="170" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- Legend -->
+    <mxCell id="leg_title"
+            value="Layer colours"
+            style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="700" width="130" height="25" as="geometry" />
+    </mxCell>
+    <mxCell id="leg_bronze"
+            value="Bronze (raw)"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cd853f;fontColor=#ffffff;strokeColor=#8b5a2b;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="730" width="130" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="leg_silver"
+            value="Silver (cleansed)"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c0c0c0;fontColor=#333333;strokeColor=#888888;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="770" width="130" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="leg_gold"
+            value="Gold (aggregated)"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4a017;fontColor=#333333;strokeColor=#9a7100;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="810" width="130" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="leg_dim"
+            value="Dimension (SCD)"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#647687;fontColor=#ffffff;strokeColor=#314354;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="850" width="130" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="leg_module"
+            value="Python Module"
+            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168bd;fontColor=#ffffff;strokeColor=#0b4884;fontSize=10;arcSize=5;"
+            vertex="1" parent="1">
+      <mxGeometry x="60" y="890" width="130" height="30" as="geometry" />
+    </mxCell>
+  </root>
+</mxGraphModel>

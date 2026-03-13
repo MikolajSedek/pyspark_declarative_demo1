@@ -1,7 +1,7 @@
 """Unit tests for pipeline transformation functions.
 
 These tests exercise the pure-Python transformation logic in
-``pipeline.transformations`` using a local SparkSession provided by the
+``src.python.transformations`` using a local SparkSession provided by the
 ``spark`` fixture defined in ``conftest.py``.
 
 Following pytest best-practices:
@@ -14,7 +14,7 @@ import pytest
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import BooleanType, StringType, StructField, StructType
 
-from pipeline.transformations import (
+from src.python.transformations import (
     aggregate_user_count_by_country,
     enrich_with_full_name,
     filter_active_users,

@@ -23,6 +23,10 @@ dev = [
     "detect-secrets>=1.4.0",
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
@@ -43,7 +47,7 @@ select = [
 ignore = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["pipeline"]
+known-first-party = ["src"]
 
 [tool.bandit]
 skips = ["B101"]  # assert statements are standard in pytest tests
