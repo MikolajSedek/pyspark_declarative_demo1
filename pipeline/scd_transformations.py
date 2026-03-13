@@ -234,6 +234,161 @@ def _build_change_hash(df: DataFrame, alias: str, tracked_cols: list[str]) -> "C
     )
 
 
+def _get_current_active(existing_scd2: DataFrame) -> DataFrame:
+    """Return only the currently active rows from an existing SCD2 table.
+
+    Args:
+        existing_scd2: Full SCD2 history table.
+
+    Returns:
+        DataFrame containing only rows where ``is_current == True``.
+    """
+    return existing_scd2.filter(F.col("is_current") == True)  # noqa: E712
+
+
+def _get_historical_rows(existing_scd2: DataFrame) -> DataFrame:
+    """Return only the historical (non-current) rows from an SCD2 table.
+
+    Args:
+        existing_scd2: Full SCD2 history table.
+
+    Returns:
+        DataFrame containing only rows where ``is_current == False``.
+    """
+    return existing_scd2.filter(F.col("is_current") == False)  # noqa: E712
+
+
+def _join_incoming_with_current(
+    latest_incoming: DataFrame,
+    current_active: DataFrame,
+) -> DataFrame:
+    """Left-join the deduplicated snapshot against the active SCD2 rows.
+
+    Args:
+        latest_incoming: One row per ``customer_id`` from the new snapshot.
+        current_active: Currently active rows from the existing SCD2 table.
+
+    Returns:
+        Joined DataFrame aliased as ``"new"`` (incoming) and ``"old"`` (active).
+    """
+    return latest_incoming.alias("new").join(
+        current_active.alias("old"),
+        on=F.col("new.customer_id") == F.col("old.customer_id"),
+        how="left",
+    )
+
+
+def _detect_changed_or_new(
+    joined: DataFrame,
+    tracked_cols: list[str],
+) -> DataFrame:
+    """Filter the join result to rows that are new or have changed attributes.
+
+    A row is considered **changed** when the SHA-256 hash of ``tracked_cols``
+    differs between the incoming and the currently active record.  A row is
+    **new** when there is no matching record in the existing SCD2 table.
+
+    Args:
+        joined: Output of :func:`_join_incoming_with_current`.
+        tracked_cols: Attribute columns to include in the change-detection hash.
+
+    Returns:
+        Subset of ``joined`` containing only new or changed customer rows.
+    """
+    new_hash = _build_change_hash(joined, "new", tracked_cols)
+    old_hash = _build_change_hash(joined, "old", tracked_cols)
+    return joined.filter(
+        F.col("old.customer_id").isNull() | (new_hash != old_hash)
+    )
+
+
+def _build_closed_rows(
+    changed_or_new: DataFrame,
+    existing_scd2: DataFrame,
+) -> DataFrame:
+    """Produce closed-out rows for customers whose attributes have changed.
+
+    Copies all SCD2 columns from the *old* (existing active) side of the join,
+    overwriting ``effective_to`` with the incoming ``updated_at`` timestamp and
+    setting ``is_current`` to ``False``.
+
+    Args:
+        changed_or_new: Rows detected as changed or new by
+            :func:`_detect_changed_or_new`.
+        existing_scd2: Full SCD2 history table (used to derive the passthrough
+            column list).
+
+    Returns:
+        DataFrame of closed rows ready to union into the final SCD2 table.
+    """
+    passthrough = [
+        c for c in existing_scd2.columns if c not in ("effective_to", "is_current")
+    ]
+    return (
+        changed_or_new.filter(F.col("old.customer_id").isNotNull())
+        .select(
+            *[F.col(f"old.{c}").alias(c) for c in passthrough],
+            F.col("new.updated_at").alias("effective_to"),
+            F.lit(False).alias("is_current"),
+        )
+    )
+
+
+def _build_inserted_rows(
+    changed_or_new: DataFrame,
+    latest_incoming: DataFrame,
+) -> DataFrame:
+    """Produce new SCD2 rows for brand-new and changed customers.
+
+    Each inserted row gets ``effective_from = updated_at``,
+    ``effective_to = NULL``, and ``is_current = True``.
+
+    Args:
+        changed_or_new: Rows detected as changed or new by
+            :func:`_detect_changed_or_new`.
+        latest_incoming: Deduplicated incoming snapshot (used to derive the
+            column list for the ``"new"`` alias).
+
+    Returns:
+        DataFrame of newly opened SCD2 rows.
+    """
+    new_cols = [
+        F.col(f"new.{c}").alias(c)
+        for c in latest_incoming.columns
+        if c != "customer_id"
+    ]
+    return changed_or_new.select(
+        F.col("new.customer_id").alias("customer_id"),
+        *new_cols,
+        F.col("new.updated_at").alias("effective_from"),
+        F.lit(None).cast("timestamp").alias("effective_to"),
+        F.lit(True).alias("is_current"),
+    )
+
+
+def _get_unchanged_current_rows(
+    current_active: DataFrame,
+    changed_or_new: DataFrame,
+) -> DataFrame:
+    """Return active rows for customers whose attributes have not changed.
+
+    Uses a ``left_anti`` join to exclude customers that appear in the
+    changed-or-new set.
+
+    Args:
+        current_active: Currently active SCD2 rows.
+        changed_or_new: Rows detected as changed or new by
+            :func:`_detect_changed_or_new`.
+
+    Returns:
+        DataFrame of unchanged active SCD2 rows to carry forward.
+    """
+    changed_ids = changed_or_new.select(
+        F.col("new.customer_id").alias("customer_id")
+    )
+    return current_active.join(changed_ids, on="customer_id", how="left_anti")
+
+
 def apply_scd_type2(
     existing_scd2: DataFrame,
     incoming: DataFrame,
@@ -243,20 +398,13 @@ def apply_scd_type2(
 
     **Algorithm**
 
-    1. Deduplicate ``incoming`` by ``customer_id``, keeping the latest row
-       (by ``updated_at``).
-    2. Join the deduplicated snapshot against the currently active rows in
-       ``existing_scd2`` (``is_current == True``).
-    3. Detect **new** customers (no match in existing) and **changed**
-       customers (hash of tracked columns differs).
-    4. **Close** existing active rows for changed customers by setting
-       ``effective_to = incoming.updated_at`` and ``is_current = False``.
-    5. **Insert** new rows for new and changed customers with
-       ``effective_from = incoming.updated_at``, ``effective_to = None``,
-       ``is_current = True``.
-    6. **Retain** all historical (non-current) rows from ``existing_scd2``
-       unchanged.
-    7. **Carry forward** existing active rows for unchanged customers.
+    1. Deduplicate ``incoming`` by ``customer_id``, keeping the latest row.
+    2. Left-join the snapshot against the currently active SCD2 rows.
+    3. Detect **new** and **changed** customers via attribute hashing.
+    4. **Close** existing active rows for changed customers.
+    5. **Insert** new rows for new and changed customers.
+    6. **Retain** all historical (non-current) rows unchanged.
+    7. **Carry forward** unchanged current rows.
     8. Union all result sets into the final SCD2 table.
 
     Args:
@@ -276,74 +424,21 @@ def apply_scd_type2(
     if tracked_cols is None:
         tracked_cols = _SCD2_TRACKED_COLUMNS
 
-    # Step 1 – deduplicate incoming to one row per customer_id.
     latest_incoming = deduplicate_by_latest(
         incoming, key_col="customer_id", order_col="updated_at"
     )
+    current_active = _get_current_active(existing_scd2)
+    joined = _join_incoming_with_current(latest_incoming, current_active)
+    changed_or_new = _detect_changed_or_new(joined, tracked_cols)
+    unchanged_current_rows = _get_unchanged_current_rows(current_active, changed_or_new)
 
-    # Step 2 – join latest incoming against currently active SCD2 rows.
-    current_active = existing_scd2.filter(F.col("is_current") == True)  # noqa: E712
+    historical_rows = _get_historical_rows(existing_scd2)
+    closed_rows = _build_closed_rows(changed_or_new, existing_scd2)
+    inserted_rows = _build_inserted_rows(changed_or_new, latest_incoming)
 
-    joined = latest_incoming.alias("new").join(
-        current_active.alias("old"),
-        on=F.col("new.customer_id") == F.col("old.customer_id"),
-        how="left",
+    return (
+        historical_rows
+        .unionByName(unchanged_current_rows)
+        .unionByName(closed_rows)
+        .unionByName(inserted_rows)
     )
-
-    # Compute change-detection hashes on both sides of the join.
-    new_hash = _build_change_hash(joined, "new", tracked_cols)
-    old_hash = _build_change_hash(joined, "old", tracked_cols)
-
-    # Step 3 – flag rows that represent a change or are brand-new.
-    changed_or_new = joined.filter(
-        F.col("old.customer_id").isNull() | (new_hash != old_hash)
-    )
-
-    # Select source columns from the "new" side for convenience.
-    new_cols = [
-        F.col(f"new.{c}").alias(c)
-        for c in latest_incoming.columns
-        if c != "customer_id"
-    ]
-
-    # Step 4 – build "closed" rows for changed existing customers.
-    # Carry forward all SCD2 columns from the old row except effective_to and
-    # is_current, which are overwritten to mark the row as no longer active.
-    old_scd2_passthrough = [
-        c for c in existing_scd2.columns if c not in ("effective_to", "is_current")
-    ]
-    closed_rows = (
-        changed_or_new.filter(F.col("old.customer_id").isNotNull())
-        .select(
-            *[F.col(f"old.{c}").alias(c) for c in old_scd2_passthrough],
-            F.col("new.updated_at").alias("effective_to"),
-            F.lit(False).alias("is_current"),
-        )
-    )
-
-    # Step 5 – build new/insert rows for new and changed customers.
-    inserted_rows = changed_or_new.select(
-        F.col("new.customer_id").alias("customer_id"),
-        *new_cols,
-        F.col("new.updated_at").alias("effective_from"),
-        F.lit(None).cast("timestamp").alias("effective_to"),
-        F.lit(True).alias("is_current"),
-    )
-
-    # Step 6 – retain all historical (non-current) rows from existing.
-    historical_rows = existing_scd2.filter(F.col("is_current") == False)  # noqa: E712
-
-    # Step 7 – carry forward unchanged current rows.
-    changed_customer_ids = changed_or_new.select(
-        F.col("new.customer_id").alias("customer_id")
-    )
-    unchanged_current_rows = current_active.join(
-        changed_customer_ids,
-        on="customer_id",
-        how="left_anti",
-    )
-
-    # Step 8 – union all result sets.
-    return historical_rows.unionByName(unchanged_current_rows).unionByName(
-        closed_rows
-    ).unionByName(inserted_rows)
