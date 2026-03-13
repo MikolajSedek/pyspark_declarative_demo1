@@ -115,8 +115,7 @@ def _compute_dim_customers_scd2(spark: SparkSession) -> DataFrame:
         existing_scd2 = spark.createDataFrame(
             [],
             schema=(
-                silver_df.schema
-                .add("effective_from", "timestamp")
+                silver_df.schema.add("effective_from", "timestamp")
                 .add("effective_to", "timestamp")
                 .add("is_current", "boolean")
             ),

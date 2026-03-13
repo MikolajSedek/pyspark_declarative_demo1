@@ -37,9 +37,7 @@ def filter_valid_customers(df: DataFrame) -> DataFrame:
     Returns:
         DataFrame with only records where both key columns are non-null.
     """
-    return df.filter(
-        F.col("customer_id").isNotNull() & F.col("updated_at").isNotNull()
-    )
+    return df.filter(F.col("customer_id").isNotNull() & F.col("updated_at").isNotNull())
 
 
 def filter_active_customers(df: DataFrame) -> DataFrame:
@@ -51,7 +49,7 @@ def filter_active_customers(df: DataFrame) -> DataFrame:
     Returns:
         DataFrame containing only active customer rows.
     """
-    return df.filter(F.col("is_active") == True)  # noqa: E712
+    return df.filter(F.col("is_active"))
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +241,7 @@ def _get_current_active(existing_scd2: DataFrame) -> DataFrame:
     Returns:
         DataFrame containing only rows where ``is_current == True``.
     """
-    return existing_scd2.filter(F.col("is_current") == True)  # noqa: E712
+    return existing_scd2.filter(F.col("is_current"))
 
 
 def _get_historical_rows(existing_scd2: DataFrame) -> DataFrame:
@@ -255,7 +253,7 @@ def _get_historical_rows(existing_scd2: DataFrame) -> DataFrame:
     Returns:
         DataFrame containing only rows where ``is_current == False``.
     """
-    return existing_scd2.filter(F.col("is_current") == False)  # noqa: E712
+    return existing_scd2.filter(~F.col("is_current"))
 
 
 def _join_incoming_with_current(
@@ -297,9 +295,7 @@ def _detect_changed_or_new(
     """
     new_hash = _build_change_hash(joined, "new", tracked_cols)
     old_hash = _build_change_hash(joined, "old", tracked_cols)
-    return joined.filter(
-        F.col("old.customer_id").isNull() | (new_hash != old_hash)
-    )
+    return joined.filter(F.col("old.customer_id").isNull() | (new_hash != old_hash))
 
 
 def _build_closed_rows(
@@ -324,13 +320,10 @@ def _build_closed_rows(
     passthrough = [
         c for c in existing_scd2.columns if c not in ("effective_to", "is_current")
     ]
-    return (
-        changed_or_new.filter(F.col("old.customer_id").isNotNull())
-        .select(
-            *[F.col(f"old.{c}").alias(c) for c in passthrough],
-            F.col("new.updated_at").alias("effective_to"),
-            F.lit(False).alias("is_current"),
-        )
+    return changed_or_new.filter(F.col("old.customer_id").isNotNull()).select(
+        *[F.col(f"old.{c}").alias(c) for c in passthrough],
+        F.col("new.updated_at").alias("effective_to"),
+        F.lit(False).alias("is_current"),
     )
 
 
@@ -383,9 +376,7 @@ def _get_unchanged_current_rows(
     Returns:
         DataFrame of unchanged active SCD2 rows to carry forward.
     """
-    changed_ids = changed_or_new.select(
-        F.col("new.customer_id").alias("customer_id")
-    )
+    changed_ids = changed_or_new.select(F.col("new.customer_id").alias("customer_id"))
     return current_active.join(changed_ids, on="customer_id", how="left_anti")
 
 
@@ -437,8 +428,7 @@ def apply_scd_type2(
     inserted_rows = _build_inserted_rows(changed_or_new, latest_incoming)
 
     return (
-        historical_rows
-        .unionByName(unchanged_current_rows)
+        historical_rows.unionByName(unchanged_current_rows)
         .unionByName(closed_rows)
         .unionByName(inserted_rows)
     )

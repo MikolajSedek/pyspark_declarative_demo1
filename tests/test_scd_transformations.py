@@ -132,9 +132,7 @@ _ALICE_MAR = _cust(
 _ALICE_MAR_99 = _cust(
     "C001", "Alice", "Smith", "US", "NYC", "Retail", 99_000.0, True, TS_MAR
 )
-_BOB_JAN = _cust(
-    "C002", "Bob", "Jones", "US", "LA", "SMB", 20_000.0, False, TS_JAN
-)
+_BOB_JAN = _cust("C002", "Bob", "Jones", "US", "LA", "SMB", 20_000.0, False, TS_JAN)
 _BOB_UK_JAN = _cust(
     "C002", "Bob", "Jones", "UK", "London", "SMB", 20_000.0, True, TS_JAN
 )
@@ -159,9 +157,7 @@ _ETHAN_JAN = _cust(
 _ZOE_MAR = _cust(
     "C999", "Zoe", "Zhao", "CN", "Beijing", "Enterprise", 200_000.0, True, TS_MAR
 )
-_NULL_ID_JAN = _cust(
-    None, "Bob", "Jones", "US", "LA", "SMB", 20_000.0, True, TS_JAN
-)
+_NULL_ID_JAN = _cust(None, "Bob", "Jones", "US", "LA", "SMB", 20_000.0, True, TS_JAN)
 
 # ---------------------------------------------------------------------------
 # Fixtures – customer DataFrames
@@ -219,21 +215,51 @@ def existing_scd2_df(spark: SparkSession) -> DataFrame:
     data = [
         # C001 – historical row (revenue 75k, closed in Feb)
         (
-            "C001", "Alice", "Smith", "a@ex.com",
-            "US", "NYC", "Retail", 75_000.0, True, TS_JAN,
-            TS_JAN, TS_FEB, False,
+            "C001",
+            "Alice",
+            "Smith",
+            "a@ex.com",
+            "US",
+            "NYC",
+            "Retail",
+            75_000.0,
+            True,
+            TS_JAN,
+            TS_JAN,
+            TS_FEB,
+            False,
         ),
         # C001 – current row (revenue 80k, opened in Feb)
         (
-            "C001", "Alice", "Smith", "a@ex.com",
-            "US", "NYC", "Retail", 80_000.0, True, TS_FEB,
-            TS_FEB, None, True,
+            "C001",
+            "Alice",
+            "Smith",
+            "a@ex.com",
+            "US",
+            "NYC",
+            "Retail",
+            80_000.0,
+            True,
+            TS_FEB,
+            TS_FEB,
+            None,
+            True,
         ),
         # C002 – only current row
         (
-            "C002", "Bob", "Jones", "b@ex.com",
-            "UK", "London", "SMB", 20_000.0, True, TS_JAN,
-            TS_JAN, None, True,
+            "C002",
+            "Bob",
+            "Jones",
+            "b@ex.com",
+            "UK",
+            "London",
+            "SMB",
+            20_000.0,
+            True,
+            TS_JAN,
+            TS_JAN,
+            None,
+            True,
         ),
     ]
     return spark.createDataFrame(data, schema=SCD2_SCHEMA)
@@ -340,10 +366,10 @@ def test_enrich_with_full_name_value(
         (75_000.0, "Gold"),
         (25_000.0, "Silver"),
         (5_000.0, "Bronze"),
-        (100_000.0, "Platinum"),   # boundary – exactly 100 000
-        (50_000.0, "Gold"),        # boundary – exactly 50 000
-        (10_000.0, "Silver"),      # boundary – exactly 10 000
-        (9_999.99, "Bronze"),      # just below Silver threshold
+        (100_000.0, "Platinum"),  # boundary – exactly 100 000
+        (50_000.0, "Gold"),  # boundary – exactly 50 000
+        (10_000.0, "Silver"),  # boundary – exactly 10 000
+        (9_999.99, "Bronze"),  # just below Silver threshold
     ],
 )
 def test_enrich_with_revenue_tier_classification(
@@ -375,9 +401,7 @@ def test_deduplicate_keeps_one_row_per_key(
     duplicate_customers_df: DataFrame,
 ) -> None:
     """Each customer_id must appear exactly once in the output."""
-    result = deduplicate_by_latest(
-        duplicate_customers_df, "customer_id", "updated_at"
-    )
+    result = deduplicate_by_latest(duplicate_customers_df, "customer_id", "updated_at")
     assert result.count() == 2
 
 
@@ -385,9 +409,7 @@ def test_deduplicate_keeps_latest_row(
     duplicate_customers_df: DataFrame,
 ) -> None:
     """The retained row for C001 must be the Feb snapshot (revenue_ytd=80 000)."""
-    result = deduplicate_by_latest(
-        duplicate_customers_df, "customer_id", "updated_at"
-    )
+    result = deduplicate_by_latest(duplicate_customers_df, "customer_id", "updated_at")
     c001 = result.filter(result["customer_id"] == "C001").collect()[0]
     assert c001["revenue_ytd"] == 80_000.0
 
@@ -519,9 +541,7 @@ def test_scd2_unchanged_row_not_duplicated(
 ) -> None:
     """An unchanged incoming row must not create a new SCD2 version."""
     # C001 changed (revenue 90k), C002 unchanged (still 20k)
-    incoming = spark.createDataFrame(
-        [_ALICE_MAR, _BOB_UK_MAR], schema=CUSTOMER_SCHEMA
-    )
+    incoming = spark.createDataFrame([_ALICE_MAR, _BOB_UK_MAR], schema=CUSTOMER_SCHEMA)
     result = apply_scd_type2(existing_scd2_df, incoming)
 
     c002_current = result.filter(
