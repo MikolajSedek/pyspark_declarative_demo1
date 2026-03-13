@@ -30,6 +30,11 @@ def deduplicate_by_latest(
     """Return one row per ``key_col`` value, keeping the row with the largest
     ``order_col`` value (typically a timestamp).
 
+    Ties (rows sharing the same ``order_col`` value for a given key) are broken
+    deterministically by a secondary descending sort on the SHA-256 hash of all
+    column values.  This guarantees a stable, reproducible winner rather than
+    an arbitrary executor-dependent result.
+
     Args:
         df: Input DataFrame.
         key_col: Column name used to partition rows (the natural key).
@@ -39,7 +44,19 @@ def deduplicate_by_latest(
     Returns:
         Deduplicated DataFrame with one row per ``key_col``.
     """
-    window = Window.partitionBy(F.col(key_col)).orderBy(F.col(order_col).desc())
+    tie_breaker = F.sha2(
+        F.concat_ws(
+            "||",
+            *[
+                F.coalesce(F.col(c).cast("string"), F.lit("__NULL__"))
+                for c in df.columns
+            ],
+        ),
+        256,
+    )
+    window = Window.partitionBy(F.col(key_col)).orderBy(
+        F.col(order_col).desc(), tie_breaker.desc()
+    )
     return (
         df.withColumn("_row_num", F.row_number().over(window))
         .filter(F.col("_row_num") == 1)
@@ -64,14 +81,22 @@ SCD2_TRACKED_COLUMNS: tuple[str, ...] = (
     "is_active",
 )
 
+# Version of the SCD2 change-detection hash schema.
+# Increment this whenever SCD2_TRACKED_COLUMNS changes so that operators can
+# identify rows produced under the old schema (stored hash_version != current
+# HASH_VERSION) and force-close them before reprocessing.
+HASH_VERSION: int = 1
+
 
 def build_change_hash(alias: str, tracked_cols: Sequence[str]) -> Column:
-    """Return a SHA-256 hash Column of the concatenated ``tracked_cols`` values.
+    """Return a versioned SHA-256 hash Column of ``tracked_cols`` values.
 
-    The hash is computed over the concatenation of all tracked column values
-    (cast to string and separated by ``"||"``).  This hash is used to detect
-    whether a customer's attributes have changed between the existing SCD2
-    table and the incoming snapshot.
+    The hash is computed over ``HASH_VERSION`` followed by the concatenation of
+    all tracked column values (cast to string and separated by ``"||"``).
+    Prefixing with the version ensures that rows produced under different
+    ``HASH_VERSION`` values yield different hashes even when the business
+    attribute values are identical, allowing operators to detect and handle
+    schema-version mismatches.
 
     Args:
         alias: The DataFrame alias used in the join (e.g. ``"new"`` or
@@ -80,12 +105,16 @@ def build_change_hash(alias: str, tracked_cols: Sequence[str]) -> Column:
             hash.
 
     Returns:
-        Column expression representing the SHA-256 hash.
+        Column expression representing the versioned SHA-256 hash.
     """
     return F.sha2(
         F.concat_ws(
             "||",
-            *[F.col(f"{alias}.{c}").cast("string") for c in tracked_cols],
+            F.lit(str(HASH_VERSION)),
+            *[
+                F.coalesce(F.col(f"{alias}.{c}").cast("string"), F.lit("__NULL__"))
+                for c in tracked_cols
+            ],
         ),
         256,
     )
@@ -193,7 +222,8 @@ def build_inserted_rows(
     """Produce new SCD2 rows for brand-new and changed customers.
 
     Each inserted row gets ``effective_from = updated_at``,
-    ``effective_to = NULL``, and ``is_current = True``.
+    ``effective_to = NULL``, ``is_current = True``, and
+    ``hash_version = HASH_VERSION``.
 
     Args:
         changed_or_new: Rows detected as changed or new by
@@ -215,6 +245,7 @@ def build_inserted_rows(
         F.col("new.updated_at").alias("effective_from"),
         F.lit(None).cast("timestamp").alias("effective_to"),
         F.lit(True).alias("is_current"),
+        F.lit(HASH_VERSION).alias("hash_version"),
     )
 
 

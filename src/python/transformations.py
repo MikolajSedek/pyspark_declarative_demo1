@@ -30,6 +30,7 @@ from collections.abc import Sequence
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
+from pyspark.sql.types import IntegerType
 
 from src.python.utils import (
     SCD2_TRACKED_COLUMNS,
@@ -42,6 +43,24 @@ from src.python.utils import (
     get_unchanged_current_rows,
     join_incoming_with_current,
 )
+
+# ---------------------------------------------------------------------------
+# Revenue tier thresholds – used in enrich_with_revenue_tier
+# ---------------------------------------------------------------------------
+
+PLATINUM_THRESHOLD: int = 100_000
+GOLD_THRESHOLD: int = 50_000
+SILVER_THRESHOLD: int = 10_000
+
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
+
+
+def _filter_active(df: DataFrame) -> DataFrame:
+    """Return only rows where ``is_active`` is ``True``."""
+    return df.filter(F.col("is_active"))
+
 
 # ---------------------------------------------------------------------------
 # Filtering – User CSV pipeline
@@ -57,7 +76,7 @@ def filter_active_users(df: DataFrame) -> DataFrame:
     Returns:
         DataFrame containing only active user rows.
     """
-    return df.filter(F.col("is_active"))
+    return _filter_active(df)
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +106,7 @@ def filter_active_customers(df: DataFrame) -> DataFrame:
     Returns:
         DataFrame containing only active customer rows.
     """
-    return df.filter(F.col("is_active"))
+    return _filter_active(df)
 
 
 # ---------------------------------------------------------------------------
@@ -132,9 +151,9 @@ def enrich_with_revenue_tier(df: DataFrame) -> DataFrame:
     """
     return df.withColumn(
         "revenue_tier",
-        F.when(F.col("revenue_ytd") >= 100_000, F.lit("Platinum"))
-        .when(F.col("revenue_ytd") >= 50_000, F.lit("Gold"))
-        .when(F.col("revenue_ytd") >= 10_000, F.lit("Silver"))
+        F.when(F.col("revenue_ytd") >= PLATINUM_THRESHOLD, F.lit("Platinum"))
+        .when(F.col("revenue_ytd") >= GOLD_THRESHOLD, F.lit("Gold"))
+        .when(F.col("revenue_ytd") >= SILVER_THRESHOLD, F.lit("Silver"))
         .otherwise(F.lit("Bronze")),
     )
 
@@ -174,7 +193,7 @@ def aggregate_revenue_by_country(df: DataFrame) -> DataFrame:
     """
     return df.groupBy(F.col("country")).agg(
         F.count("*").alias("customer_count"),
-        F.sum(F.col("revenue_ytd")).alias("total_revenue"),
+        F.round(F.sum(F.col("revenue_ytd")), 2).alias("total_revenue"),
         F.round(F.avg(F.col("revenue_ytd")), 2).alias("avg_revenue"),
     )
 
@@ -257,6 +276,14 @@ def apply_scd_type2(
     """
     if tracked_cols is None:
         tracked_cols = SCD2_TRACKED_COLUMNS
+
+    # Migration shim: backfill hash_version for tables persisted before this
+    # column was introduced.  Without this, unionByName raises AnalysisException
+    # when inserting rows (which always have hash_version) into an older table.
+    if "hash_version" not in existing_scd2.columns:
+        existing_scd2 = existing_scd2.withColumn(
+            "hash_version", F.lit(None).cast(IntegerType())
+        )
 
     latest_incoming = deduplicate_by_latest(
         incoming, key_col="customer_id", order_col="updated_at"

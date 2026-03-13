@@ -126,7 +126,7 @@ C4 draw.io diagrams are available in `src/diagrams/`.  Open them with
 
 ## Requirements
 
-- Python ≥ 3.10
+- Python ≥ 3.12
 - Java 11 or 17 (required by Apache Spark)
 - PySpark ≥ 4.0
 

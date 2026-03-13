@@ -32,6 +32,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import (
     BooleanType,
     DoubleType,
+    IntegerType,
     StringType,
     StructField,
     StructType,
@@ -84,6 +85,7 @@ SCD2_SCHEMA = StructType(
         StructField("effective_from", TimestampType(), nullable=True),
         StructField("effective_to", TimestampType(), nullable=True),
         StructField("is_current", BooleanType(), nullable=True),
+        StructField("hash_version", IntegerType(), nullable=True),
     ]
 )
 
@@ -228,6 +230,7 @@ def existing_scd2_df(spark: SparkSession) -> DataFrame:
             TS_JAN,
             TS_FEB,
             False,
+            1,
         ),
         # C001 – current row (revenue 80k, opened in Feb)
         (
@@ -244,6 +247,7 @@ def existing_scd2_df(spark: SparkSession) -> DataFrame:
             TS_FEB,
             None,
             True,
+            1,
         ),
         # C002 – only current row
         (
@@ -260,6 +264,7 @@ def existing_scd2_df(spark: SparkSession) -> DataFrame:
             TS_JAN,
             None,
             True,
+            1,
         ),
     ]
     return spark.createDataFrame(data, schema=SCD2_SCHEMA)
