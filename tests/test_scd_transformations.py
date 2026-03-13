@@ -640,14 +640,21 @@ def test_scd2_only_one_current_row_per_customer(
 
 def test_scd2_tracked_columns_is_immutable() -> None:
     """``SCD2_TRACKED_COLUMNS`` must be a tuple so callers cannot mutate it."""
-    assert isinstance(SCD2_TRACKED_COLUMNS, tuple), (
-        "SCD2_TRACKED_COLUMNS must be a tuple to prevent accidental mutation"
-    )
+    assert isinstance(
+        SCD2_TRACKED_COLUMNS, tuple
+    ), "SCD2_TRACKED_COLUMNS must be a tuple to prevent accidental mutation"
 
 
 def test_scd2_tracked_columns_contains_expected_fields() -> None:
     """``SCD2_TRACKED_COLUMNS`` must include all business-critical attributes."""
-    required = {"first_name", "last_name", "email", "country", "revenue_ytd", "is_active"}
+    required = {
+        "first_name",
+        "last_name",
+        "email",
+        "country",
+        "revenue_ytd",
+        "is_active",
+    }
     assert required.issubset(set(SCD2_TRACKED_COLUMNS))
 
 
