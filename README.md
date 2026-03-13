@@ -239,6 +239,47 @@ Hooks configured in `.pre-commit-config.yaml`:
 
 ---
 
+## Continuous Integration (GitHub Actions)
+
+Every push and pull request triggers the CI pipeline defined in
+`.github/workflows/ci.yml`.  The workflow contains two parallel jobs:
+
+### `pre-commit` job
+
+Runs all hooks from `.pre-commit-config.yaml` against the entire codebase using
+[`pre-commit/action@v3.0.1`](https://github.com/pre-commit/action).
+Hook environments are cached automatically on the `.pre-commit-config.yaml`
+hash, so subsequent runs are fast.
+
+| Check           | Tool            | Purpose                                 |
+|-----------------|-----------------|-----------------------------------------|
+| Whitespace/EOF  | pre-commit-hooks | Formatting hygiene                     |
+| YAML / TOML     | pre-commit-hooks | Config file validation                  |
+| Merge conflicts | pre-commit-hooks | Detect unresolved markers               |
+| Lint + isort    | ruff            | PEP 8 compliance, import ordering       |
+| Format          | ruff-format     | Black-compatible formatting             |
+| Security        | bandit          | Common security anti-patterns           |
+| Docstrings      | interrogate     | ≥ 80 % docstring coverage               |
+| Secrets         | detect-secrets  | Prevent accidental credential commits   |
+
+### `tests` job
+
+Runs the full pytest suite across a **Python 3.10 / 3.11 / 3.12 matrix** on
+`ubuntu-latest`.  Java 17 (Temurin) is installed alongside each Python version
+because Apache Spark requires a JVM.
+
+```
+ubuntu-latest × Python 3.10  ──┐
+ubuntu-latest × Python 3.11  ──┼─ pytest --cov=src/python
+ubuntu-latest × Python 3.12  ──┘         (coverage XML uploaded as artifact)
+```
+
+The two jobs run **in parallel** for fastest total feedback.  Each job cancels
+any previous in-progress run for the same branch (`concurrency` group), saving
+CI minutes on rapid successive pushes.
+
+---
+
 ## License
 
 Apache License 2.0
