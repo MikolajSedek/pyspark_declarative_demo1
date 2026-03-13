@@ -56,7 +56,6 @@ Reference:
 
 from pyspark.pipelines import materialized_view, table
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql import functions as F
 
 from src.python.io import read_customers_parquet, read_users_csv
 from src.python.transformations import (
@@ -169,29 +168,17 @@ def _compute_dim_customers_scd1(spark: SparkSession) -> DataFrame:
 def _compute_dim_customers_scd2(spark: SparkSession) -> DataFrame:
     """Build the SCD Type 2 customer dimension.
 
-    Loads the existing SCD2 history (empty DataFrame on the first run) and
-    merges it against the current Silver snapshot.
+    The declarative pipeline runner owns the full lifecycle of
+    ``dim_customers_scd2``.  On the first pipeline run the runner creates the
+    table empty; on subsequent runs it supplies the persisted historical state.
+    This function must remain stateless — it must not call
+    ``spark.catalog.tableExists`` or read its own output table directly, as
+    those patterns interfere with the runner's dependency resolution and table
+    initialisation logic.
     """
     silver_df = spark.table("silver_valid_customers")
-
-    if spark.catalog.tableExists("dim_customers_scd2"):
-        existing_scd2 = spark.table("dim_customers_scd2")
-    else:
-        existing_scd2 = spark.createDataFrame(
-            [],
-            schema=(
-                silver_df.schema.add("effective_from", "timestamp")
-                .add("effective_to", "timestamp")
-                .add("is_current", "boolean")
-            ),
-        )
-
-    if "updated_at" in silver_df.columns:
-        incoming_df = silver_df
-    else:
-        incoming_df = silver_df.withColumn("updated_at", F.current_timestamp())
-
-    return apply_scd_type2(existing_scd2, incoming_df)
+    existing_scd2 = spark.table("dim_customers_scd2")
+    return apply_scd_type2(existing_scd2, silver_df)
 
 
 def register_customer_pipeline(spark: SparkSession) -> None:

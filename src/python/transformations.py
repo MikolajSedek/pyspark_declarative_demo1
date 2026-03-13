@@ -30,6 +30,7 @@ from collections.abc import Sequence
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
+from pyspark.sql.types import IntegerType
 
 from src.python.utils import (
     SCD2_TRACKED_COLUMNS,
@@ -258,7 +259,15 @@ def apply_scd_type2(
     if tracked_cols is None:
         tracked_cols = SCD2_TRACKED_COLUMNS
 
-    latest_incoming = deduplicate_by_latest(
+    # Migration shim: backfill hash_version for tables persisted before this
+    # column was introduced.  Without this, unionByName raises AnalysisException
+    # when inserting rows (which always have hash_version) into an older table.
+    if "hash_version" not in existing_scd2.columns:
+        existing_scd2 = existing_scd2.withColumn(
+            "hash_version", F.lit(None).cast(IntegerType())
+        )
+
+    latest_incoming= deduplicate_by_latest(
         incoming, key_col="customer_id", order_col="updated_at"
     )
     current_active = get_current_active(existing_scd2)
