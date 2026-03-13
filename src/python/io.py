@@ -33,7 +33,7 @@ from pyspark.sql.types import (
 #: Expected schema for the user CSV source.
 USER_CSV_SCHEMA = StructType(
     [
-        StructField("id", StringType(), nullable=False),
+        StructField("id", StringType(), nullable=True),
         StructField("first_name", StringType(), nullable=True),
         StructField("last_name", StringType(), nullable=True),
         StructField("country", StringType(), nullable=True),
